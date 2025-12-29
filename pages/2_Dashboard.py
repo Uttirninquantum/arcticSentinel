@@ -227,7 +227,7 @@ if page == "📊 Overview":
                                        labels=['🟢 Recent', '🟡 Medium', '🟠 Old', '🔴 Very Old'])
     
     color_map = {'🟢 Recent': '#00ff88', '🟡 Medium': '#ffaa00', '🟠 Old': '#ff4400', '🔴 Very Old': '#cc0000'}
-    fig_timeline = px.timeline(df_timeline.head(100), x_start="published_date", x_end="last_modified_date",
+    fig_timeline = px.timeline(df_timeline.head(100), x_start="last_modified_date", x_end="current_date",
                               y="cve_id", color="age_category", color_discrete_map=color_map,
                               title="Timeline: Darker = Older Vulnerability")
     fig_timeline.update_yaxes(categoryorder="total ascending")
