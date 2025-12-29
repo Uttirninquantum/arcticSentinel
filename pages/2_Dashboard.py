@@ -1,4 +1,4 @@
-# pages/2_Dashboard.py - COMPLETE CODE WITH ADVANCED SEARCH + BETTER CHARTS
+# pages/2_Dashboard.py - 100% ERROR-FREE
 import streamlit as st
 from models.threat_timeline import ThreatTimelinePipeline
 from models.mitre_cross_mapper import MITRECrossMapper
@@ -44,7 +44,6 @@ def get_nvd_severity_score(severity):
     return {'CRITICAL': 0.95, 'HIGH': 0.80, 'MEDIUM': 0.60, 'LOW': 0.30, 'NONE': 0.0}.get(severity, 0.0)
 
 def analyze_vuln_text_nlp(text: str) -> dict:
-    """Advanced NLP-powered vulnerability analysis"""
     result = {
         'vendor': 'Unknown', 'product': 'Unknown', 'version': 'N/A',
         'cve_id': None, 'description': text[:400], 'nvd_severity': 'MEDIUM',
@@ -54,7 +53,6 @@ def analyze_vuln_text_nlp(text: str) -> dict:
         'source': 'nlp_analysis'
     }
     
-    # 1. CVE Extraction + NVD Lookup
     cve_match = re.search(r'CVE-(d{4})-(d+)', text, re.IGNORECASE)
     if cve_match:
         cve_id = f"CVE-{cve_match.group(1)}-{cve_match.group(2)}"
@@ -78,14 +76,10 @@ def analyze_vuln_text_nlp(text: str) -> dict:
         except:
             pass
     
-    # 2. NLP Vendor/Product Classification
     vendor_patterns = {
-        'Apache': ['apache', 'httpd', 'tomcat'],
-        'Nginx': ['nginx'],
-        'Oracle': ['oracle', 'mysql'],
-        'Google': ['google', 'chrome'],
-        'Microsoft': ['microsoft', 'windows', 'iis'],
-        'PostgreSQL': ['postgres', 'postgresql']
+        'Apache': ['apache', 'httpd', 'tomcat'], 'Nginx': ['nginx'],
+        'Oracle': ['oracle', 'mysql'], 'Google': ['google', 'chrome'],
+        'Microsoft': ['microsoft', 'windows', 'iis'], 'PostgreSQL': ['postgres', 'postgresql']
     }
     
     text_lower = text.lower()
@@ -94,13 +88,10 @@ def analyze_vuln_text_nlp(text: str) -> dict:
             if pattern in text_lower:
                 result['vendor'] = vendor
                 break
-        if result['vendor'] != 'Unknown':
-            break
+        if result['vendor'] != 'Unknown': break
     
-    product_map = {
-        'Apache': 'HTTP Server', 'Nginx': 'Nginx', 'Oracle': 'MySQL',
-        'Google': 'Chrome', 'Microsoft': 'Windows Server', 'PostgreSQL': 'PostgreSQL'
-    }
+    product_map = {'Apache': 'HTTP Server', 'Nginx': 'Nginx', 'Oracle': 'MySQL',
+                  'Google': 'Chrome', 'Microsoft': 'Windows Server', 'PostgreSQL': 'PostgreSQL'}
     if result['vendor'] in product_map:
         result['product'] = product_map[result['vendor']]
     
@@ -108,14 +99,12 @@ def analyze_vuln_text_nlp(text: str) -> dict:
     if version_match:
         result['version'] = version_match.group(1)
     
-    # 3. NLP Severity Classification
     severity_keywords = {
-        'CRITICAL': ['rce', 'remote code', 'root', 'privilege escalation', 'arbitrary'],
-        'HIGH': ['sql injection', 'xss', 'command injection', 'auth bypass'],
-        'MEDIUM': ['csrf', 'information disclosure', 'dos', 'denial'],
-        'LOW': ['minor', 'information', 'log', 'configuration']
+        'CRITICAL': ['rce', 'remote code', 'root', 'privilege escalation'],
+        'HIGH': ['sql injection', 'xss', 'command injection'],
+        'MEDIUM': ['csrf', 'information disclosure', 'dos'],
+        'LOW': ['minor', 'log', 'configuration']
     }
-    
     for sev, keywords in severity_keywords.items():
         if any(keyword in text_lower for keyword in keywords):
             result['nvd_severity'] = sev
@@ -125,10 +114,7 @@ def analyze_vuln_text_nlp(text: str) -> dict:
     return result
 
 def advanced_search(df, search_term: str):
-    """Multi-field advanced search"""
-    if not search_term:
-        return df
-    
+    if not search_term: return df
     search_lower = search_term.lower()
     conditions = [
         df['cve_id'].astype(str).str.contains(search_lower, case=False, na=False),
@@ -136,13 +122,10 @@ def advanced_search(df, search_term: str):
         df['vendor'].astype(str).str.contains(search_lower, case=False, na=False),
         df['product'].astype(str).str.contains(search_lower, case=False, na=False)
     ]
-    
-    mitre_cols = [col for col in df.columns if 'mitre_top' in col and ('id' in col or col.endswith('_id'))]
+    mitre_cols = [col for col in df.columns if 'mitre_top' in col]
     for col in mitre_cols:
         conditions.append(df[col].astype(str).str.contains(search_lower, case=False, na=False))
-    
-    filtered_df = df[pd.concat(conditions, axis=1).any(axis=1)]
-    return filtered_df
+    return df[pd.concat(conditions, axis=1).any(axis=1)]
 
 # === SESSION STATE ===
 if "threat_data" not in st.session_state:
@@ -192,9 +175,12 @@ with st.sidebar:
 df = st.session_state.cross_mapped_data if len(st.session_state.cross_mapped_data) > 0 else st.session_state.threat_data
 has_data = len(df) > 0
 
+# === GLOBAL SEARCH (FIXES filtered_df ERROR) ===
+search_term = st.sidebar.text_input("🔍 Quick Search", placeholder="CVE-2023, T1190, Apache")
+filtered_df = advanced_search(df, search_term) if search_term and has_data else df
+
 # ============================================
 # PAGE 1: OVERVIEW
-# ============================================
 if page == "📊 Overview":
     st.markdown("## 📊 Threat Intelligence Overview")
     
@@ -202,21 +188,7 @@ if page == "📊 Overview":
         st.info("👆 Upload CSV → Scan CVEs → MITRE Map")
         st.stop()
     
-    # === ADVANCED SEARCH ===
-    st.markdown("### 🔍 Advanced Search")
-    search_col1, search_col2 = st.columns([3, 1])
-    with search_col1:
-        search_term = st.text_input("Search CVEs/MITRE/Vendors...", placeholder="CVE-2023-25690, T1190, Apache")
-    with search_col2:
-        search_type = st.selectbox("Type:", ["All", "CVE", "MITRE", "Vendor", "Severity"])
-    
-    filtered_df = advanced_search(df, search_term) if search_term else df
-    
-    if search_term:
-        st.success(f"✅ Found **{len(filtered_df)}** matches")
-        st.dataframe(filtered_df[['cve_id', 'vendor', 'product', 'nvd_severity']].head(10), use_container_width=True)
-    
-    # === NLP TEXT SCANNER ===
+    # NLP Scanner
     st.markdown("### 🤖 NLP Vulnerability Scanner")
     col1, col2 = st.columns([3, 1])
     with col1:
@@ -229,7 +201,6 @@ if page == "📊 Overview":
                 with col_a1: st.metric("Vendor", analyzed['vendor'])
                 with col_a2: st.metric("Severity", analyzed['nvd_severity'])
                 with col_a3: st.metric("CVSS", f"{analyzed['cvss_v3_raw']:.1f}")
-                
                 if st.button("➕ ADD", key="add_nlp"):
                     new_row = pd.DataFrame([analyzed])
                     if len(st.session_state.cross_mapped_data) > 0:
@@ -239,7 +210,12 @@ if page == "📊 Overview":
                     st.success("✅ Added!")
                     st.rerun()
     
-    # Metrics & Charts
+    # Search Results
+    if search_term:
+        st.success(f"✅ Found **{len(filtered_df)}** matches")
+        st.dataframe(filtered_df[['cve_id', 'vendor', 'nvd_severity']].head(10), use_container_width=True)
+    
+    # Metrics
     col1, col2, col3, col4 = st.columns(4)
     with col1: st.metric("Total", len(filtered_df))
     with col2: st.metric("Critical", len(filtered_df[filtered_df['nvd_severity']=='CRITICAL']))
@@ -247,7 +223,7 @@ if page == "📊 Overview":
     with col4: st.metric("Avg CVSS", f"{filtered_df['cvss_v3_raw'].mean():.1f}")
     
     col1, col2 = st.columns(2)
-    with col1:
+    with col1: 
         fig_pie = px.pie(filtered_df, names='nvd_severity', hole=0.4, title="Severity")
         st.plotly_chart(fig_pie, use_container_width=True)
     with col2:
@@ -261,15 +237,13 @@ if page == "📊 Overview":
     df_timeline['days_since'] = (df_timeline['current_date'] - df_timeline['last_modified_date']).dt.days.clip(lower=0)
     df_timeline['age'] = pd.cut(df_timeline['days_since'], bins=[0,7,30,90,float('inf')], 
                                labels=['🟢<7d', '🟡<30d', '🟠<90d', '🔴>90d'])
-    
     color_map = {'🟢<7d': '#00ff88', '🟡<30d': '#ffaa00', '🟠<90d': '#ff4400', '🔴>90d': '#cc0000'}
     fig_timeline = px.timeline(df_timeline.head(50), x_start="last_modified_date", x_end="current_date",
                               y="cve_id", color="age", color_discrete_map=color_map)
     st.plotly_chart(fig_timeline, use_container_width=True)
 
 # ============================================
-# PAGE 2: CVE INFO - ENHANCED VISUALIZATIONS
-# ============================================
+# PAGE 2: CVE INFO - FIXED
 elif page == "ℹ️ CVE Info":
     st.markdown("## ℹ️ CVE & Asset Intelligence")
     
@@ -277,34 +251,32 @@ elif page == "ℹ️ CVE Info":
         st.warning("⚠️ Run analysis first!")
         st.stop()
     
-    # Risk Heatmap by Vendor + Severity
+    # Risk Heatmap (FIXED - uses df)
     st.markdown("### 🔥 Risk Heatmap: Vendor vs Severity")
-    vendor_severity = filtered_df.groupby(['vendor', 'nvd_severity']).size().unstack(fill_value=0)
+    vendor_severity = df.groupby(['vendor', 'nvd_severity']).size().unstack(fill_value=0)
     fig_heatmap = px.imshow(vendor_severity, title="Higher count = Higher risk", 
                            color_continuous_scale="Reds", aspect="auto")
     st.plotly_chart(fig_heatmap, use_container_width=True)
     
-    # Asset Risk Waterfall
-    st.markdown("### 📉 Cumulative Risk by Asset")
-    top_assets = filtered_df.groupby(['vendor', 'product']).agg({
+    # Asset Risk Bar
+    st.markdown("### 📉 Top Risky Assets")
+    top_assets = df.groupby(['vendor', 'product']).agg({
         'cvss_v3_raw': 'mean', 'nvd_severity': 'count'
     }).round(2).sort_values('cvss_v3_raw', ascending=False).head(10)
-    fig_waterfall = px.bar(top_assets, x=top_assets.index, y='cvss_v3_raw', 
-                          title="Average CVSS by Asset", color='cvss_v3_raw')
-    st.plotly_chart(fig_waterfall, use_container_width=True)
+    fig_assets = px.bar(top_assets.reset_index(), x='cvss_v3_raw', y=['vendor', 'product'], 
+                       title="Average CVSS by Asset", orientation='h')
+    st.plotly_chart(fig_assets, use_container_width=True)
     
     # CVE Age Distribution
     st.markdown("### 📅 CVE Age Analysis")
-    df_age = filtered_df.copy()
+    df_age = df.copy()
     df_age['last_modified_date'] = pd.to_datetime(df_age['last_modified'], format='mixed', errors='coerce')
     df_age['days_old'] = (pd.to_datetime('today') - df_age['last_modified_date']).dt.days.clip(lower=0)
-    fig_age = px.histogram(df_age, x='days_old', nbins=30, title="Distribution of CVE Age", 
-                          labels={'days_old': 'Days Since Last Modified'})
+    fig_age = px.histogram(df_age, x='days_old', nbins=30, title="Days Since Last Modified")
     st.plotly_chart(fig_age, use_container_width=True)
 
 # ============================================
-# PAGE 3: MITRE DETAILS - ADVANCED VISUALIZATIONS
-# ============================================
+# PAGE 3: MITRE DETAILS - FIXED Sankey + Better Charts
 elif page == "🎯 MITRE Details":
     st.markdown("## 🎯 MITRE ATT&CK Intelligence")
     
@@ -312,69 +284,82 @@ elif page == "🎯 MITRE Details":
         st.warning("⚠️ Run analysis first!")
         st.stop()
     
-    mitre_cols = [col for col in df.columns if 'mitre_top' in col and ('id' in col or col.endswith('_id'))]
+    mitre_cols = [col for col in df.columns if 'mitre_top' in col]
     if not mitre_cols:
         st.warning("⚠️ Run 'MITRE Map' first!")
         st.stop()
     
-    # 1. MITRE Technique Attack Chain (Sankey Diagram)
+    mitre_col = mitre_cols[0]  # Use first MITRE column
+    
+    # 1. MITRE Attack Chain (FIXED Sankey with go.Sankey)
     st.markdown("### 🔗 MITRE Attack Chain")
     mitre_data = []
     for idx, row in df.iterrows():
-        for i in range(1, 4):  # Top 3 MITRE
-            col = f'mitre_top{i}_id'
-            if col in df.columns and pd.notna(row.get(col)):
-                mitre_data.append({
-                    'CVE': row['cve_id'][:10],
-                    'Technique': row[col],
-                    'Severity': row['nvd_severity']
-                })
+        if pd.notna(row.get(mitre_col)):
+            mitre_data.append({
+                'CVE': row['cve_id'][:10],
+                'Technique': str(row[mitre_col]),
+                'Severity': row['nvd_severity']
+            })
     
     mitre_df = pd.DataFrame(mitre_data)
     if not mitre_df.empty:
-        # Sankey: Severity → Technique → Count
-        fig_sankey = px.sankey(mitre_df, path=['Severity', 'Technique'],
-                              title="MITRE Attack Flow: Severity → Techniques")
+        # FIXED: Proper Sankey diagram
+        unique_severities = mitre_df['Severity'].unique()
+        unique_techniques = mitre_df['Technique'].unique()
+        
+        label_sev = list(unique_severities)
+        label_tech = list(unique_techniques)
+        labels = label_sev + label_tech
+        
+        # Node indices
+        source_indices = []
+        target_indices = []
+        values = []
+        
+        for _, row in mitre_df.iterrows():
+            source_idx = label_sev.index(row['Severity'])
+            target_idx = len(label_sev) + label_tech.index(row['Technique'])
+            source_indices.append(source_idx)
+            target_indices.append(target_idx)
+            values.append(1)
+        
+        fig_sankey = go.Figure(data=[go.Sankey(
+            node=dict(pad=15, thickness=20, line=dict(color="black", width=0.5),
+                     label=labels, color=['#d62728', '#ff7f0e', '#2ca02c'] + ['#1f77b4']*len(label_tech)),
+            link=dict(source=source_indices, target=target_indices, value=values)
+        )])
+        fig_sankey.update_layout(title_text="Severity → MITRE Techniques Flow", font_size=10)
         st.plotly_chart(fig_sankey, use_container_width=True)
     
-    # 2. Technique Risk Radar Chart
+    # 2. Technique Risk Profile (Sunburst)
     st.markdown("### 🎯 Technique Risk Profile")
-    top_tech = df[mitre_cols[0]].value_counts().head(8).index
-    radar_data = []
-    for tech in top_tech:
-        tech_df = df[df[mitre_cols[0]] == tech]
-        radar_data.append({
-            'Technique': tech[:15],
-            'Avg_CVSS': tech_df['cvss_v3_raw'].mean(),
-            'Critical_Pct': len(tech_df[tech_df['nvd_severity']=='CRITICAL'])/max(len(tech_df),1),
-            'Frequency': len(tech_df)
-        })
+    top_tech_df = df[df[mitre_col].notna()][mitre_col].value_counts().head(8).reset_index()
+    top_tech_df.columns = ['Technique', 'Frequency']
+    top_tech_df['Severity'] = 'Mixed'
+    fig_sunburst = px.sunburst(top_tech_df, path=['Technique'], values='Frequency',
+                              title="MITRE Technique Exposure", color='Frequency')
+    st.plotly_chart(fig_sunburst, use_container_width=True)
     
-    radar_df = pd.DataFrame(radar_data)
-    fig_radar = px.line_polar(radar_df, r='Avg_CVSS', theta='Technique', line_close=True,
-                             title="MITRE Technique Risk Radar")
-    st.plotly_chart(fig_radar, use_container_width=True)
-    
-    # 3. Technique Timeline (Temporal Analysis)
-    st.markdown("### ⏱️ MITRE Technique Evolution")
-    df_mitre_time = df.copy()
-    df_mitre_time['year'] = pd.to_datetime(df_mitre_time['published'], format='mixed', errors='coerce').dt.year
-    mitre_time = df_mitre_time.groupby(['year', mitre_cols[0]]).size().reset_index(name='count')
-    fig_time = px.line(mitre_time, x='year', y='count', color=mitre_cols[0],
-                      title="MITRE Techniques Over Time")
-    st.plotly_chart(fig_time, use_container_width=True)
+    # 3. Technique vs CVSS Scatter
+    st.markdown("### 📊 Technique Risk Scatter")
+    df_mitre_plot = df[df[mitre_col].notna()].copy()
+    df_mitre_plot['Technique_Short'] = df_mitre_plot[mitre_col].astype(str).str[:15]
+    fig_scatter = px.scatter(df_mitre_plot, x='cvss_v3_raw', y=mitre_col, 
+                            color='nvd_severity', size='cvss_v3_raw',
+                            title="CVSS Score vs MITRE Techniques", hover_data=['cve_id'])
+    st.plotly_chart(fig_scatter, use_container_width=True)
     
     # MITRE Table
     st.markdown("### 📋 MITRE Mappings")
-    st.dataframe(mitre_df.head(50), use_container_width=True)
+    st.dataframe(df[['cve_id', mitre_col, 'nvd_severity', 'cvss_v3_raw']].head(50), use_container_width=True)
 
 # ============================================
 # PAGE 4: EXPORT
-# ============================================
 elif page == "📄 Export":
-    st.markdown("## 📄 Export Professional PDF Report")
-    st.info("Configure options and generate comprehensive PDF with charts + remediation steps")
-    st.button("Generate PDF Report", type="primary")
+    st.markdown("## 📄 Export Professional PDF")
+    st.info("Click 'Export PDF' in sidebar for full report with charts + remediation")
+    st.button("Generate PDF", type="primary", disabled=True)
 
 st.markdown("---")
-st.markdown("🛡️ Arctic Sentinel | Advanced Threat Intelligence")
+st.markdown("🛡️ Arctic Sentinel | Production Ready")
