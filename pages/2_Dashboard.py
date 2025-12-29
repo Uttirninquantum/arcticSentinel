@@ -95,7 +95,7 @@ with search_col2:
         pass  # Live search below
 
 # === TEXT VULN ANALYZER ===
-def analyze_vuln_text(text: str) -> Dict:
+def analyze_vuln_text(text: str) :
     """NLP-powered vulnerability text analysis"""
     from sentence_transformers import SentenceTransformer
     import requests, re
