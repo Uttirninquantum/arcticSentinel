@@ -11,7 +11,7 @@ import re
 import numpy as np
 import io
 
-st.set_page_config(page_title="Dashboard", layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(page_title="Dashboard")
 
 st.markdown("""
 <style>
