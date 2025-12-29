@@ -5,9 +5,7 @@ st.set_page_config(page_title="Upload File", layout="wide")
 st.markdown(
     """
     <style>
-        [data-testid="stSidebar"] {
-            display: none;
-        }
+        
         .block-container {
             padding-left: 3rem;
             padding-right: 3rem;
