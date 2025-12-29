@@ -1,9 +1,6 @@
 import streamlit as st
 
-st.set_page_config(
-    page_title="Arctic Sentinel",
-    layout="wide",
-)
+
 
 st.markdown(
     """
