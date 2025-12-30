@@ -129,36 +129,36 @@ if page == "📊 Overview":
         st.plotly_chart(fig_vendors, use_container_width=True)
     # ADD THIS TIMELINE SECTION to Overview page (after vendor histogram, before Text-to-Vuln)
 
-# === TIMELINE SECTION ===
-st.markdown("### 📅 CVE Timeline Analysis")
-df_timeline = df.copy()
-df_timeline['published_date'] = pd.to_datetime(df_timeline['published'], errors='coerce')
-df_timeline = df_timeline.dropna(subset=['published_date']).sort_values('published_date')
+    # === TIMELINE SECTION ===
+    st.markdown("### 📅 CVE Timeline Analysis")
+    df_timeline = df.copy()
+    df_timeline['published_date'] = pd.to_datetime(df_timeline['published'], errors='coerce')
+    df_timeline = df_timeline.dropna(subset=['published_date']).sort_values('published_date')
 
-if len(df_timeline) > 0:
-    col1, col2, col3 = st.columns(3)
-    with col1: st.metric("Earliest", df_timeline['published_date'].min().strftime('%Y-%m-%d'))
-    with col2: st.metric("Latest", df_timeline['published_date'].max().strftime('%Y-%m-%d'))
-    with col3: st.metric("Span", f"{(df_timeline['published_date'].max() - df_timeline['published_date'].min()).days}d")
+    if len(df_timeline) > 0:
+        col1, col2, col3 = st.columns(3)
+        with col1: st.metric("Earliest", df_timeline['published_date'].min().strftime('%Y-%m-%d'))
+        with col2: st.metric("Latest", df_timeline['published_date'].max().strftime('%Y-%m-%d'))
+        with col3: st.metric("Span", f"{(df_timeline['published_date'].max() - df_timeline['published_date'].min()).days}d")
     
-    col1, col2 = st.columns(2)
-    with col1:
-        daily_cves = df_timeline.groupby('published_date').size().reset_index(name='count')
-        fig_timeline = px.area(daily_cves, x='published_date', y='count', 
+        col1, col2 = st.columns(2)
+        with col1:
+            daily_cves = df_timeline.groupby('published_date').size().reset_index(name='count')
+            fig_timeline = px.area(daily_cves, x='published_date', y='count', 
                               title="CVE Publication Timeline", height=300)
-        st.plotly_chart(fig_timeline, use_container_width=True)
+            st.plotly_chart(fig_timeline, use_container_width=True)
     
-    with col2:
-        current_time = pd.Timestamp.now()
-        df_gantt = df_timeline.head(20).copy()
-        df_gantt['end_date'] = current_time
-        fig_gantt = px.timeline(df_gantt, x_start="published_date", x_end="end_date",
+        with col2:
+            current_time = pd.Timestamp.now()
+            df_gantt = df_timeline.head(20).copy()
+            df_gantt['end_date'] = current_time
+            fig_gantt = px.timeline(df_gantt, x_start="published_date", x_end="end_date",
                                y="cve_id", color="nvd_severity",
                                title="CVE Age Gantt (Top 20)", height=300,
                                color_discrete_map={'CRITICAL': '#dc2626', 'HIGH': '#ea580c'})
-        st.plotly_chart(fig_gantt, use_container_width=True)
-else:
-    st.info("No valid publication dates found")
+            st.plotly_chart(fig_gantt, use_container_width=True)
+    else:
+        st.info("No valid publication dates found")
 
 
     # === TEXT-TO-VULN SEARCH ===
