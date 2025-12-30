@@ -44,13 +44,16 @@ uploaded = st.file_uploader(
     "", type=["csv"], label_visibility="collapsed"
 )
 
-col1, col2 = st.columns(2)
-with col1:
-    if uploaded:
+if uploaded:
+    col1, col2 = st.columns(2)
+    
+    with col1:
         st.success("File selected")
-
-with col2:
-    if uploaded and st.button("Upload", type="primary"):
+    
+    with col2:
+        st.empty()
+    
+    if st.button("Upload", type="primary", key="upload_btn"):
         st.session_state["file"] = uploaded
         st.switch_page("pages/2_Dashboard.py")
 
