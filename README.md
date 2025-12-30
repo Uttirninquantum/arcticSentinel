@@ -6,6 +6,7 @@ CODE@FROST 2025 Hackathon Team
 ## Team
 ### Team Name
 *BLITZKRIEG*
+![team logo ](pages/image.png)
 ### Team Members
 1. *Jibran Noorshah*
 
