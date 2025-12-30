@@ -56,6 +56,7 @@ Link: https://www.canva.com/design/DAG8-Fu_p0k/Ji80loMJRxg5wAcqUVMK7Q/view?utm_c
 Primary Programming Language: Python
 
 Frontend Framework (or Library): ```streamlit``` (Python)
+
 Backend: ```torch```, ```sklearn``` (scikit-learn), ```pandas```, ```numpy```, ```sentence_transformers```
 
 Tech Stack: ATTACK-BERT embeddings, Plotly interactive, ReportLab PDF generation. Fully functional threat intel platform with ML-powered similarity matching and automated reporting.
