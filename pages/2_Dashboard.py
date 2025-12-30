@@ -456,6 +456,3 @@ elif page == "📄 Export PDF":
             )
             st.balloons()
             st.success("✅ Professional PDF Report Generated!")
-
-st.markdown("---")
-st.markdown("🛡️ Arctic Sentinel | ATTACK-BERT + NLP | Production Ready")
