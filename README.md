@@ -6,11 +6,11 @@ CODE@FROST 2025 Hackathon Team
 *BLITZKRIEG*
 ![team logo ](pages/image.png)
 ### Team Members
-1. *Jibran Noorshah*
+1. *Jibran Noorshah*: Developing API calls, data pipeline logic, formulating the research.
 
-2. *Uttirn Gyan*
+2. *Uttirn Gyan*: Developing NLP logic, MITRE mapping logic,formulating the idea.
 
-3. *Naren Jindal*
+3. *Naren Jindal*: Making the presentation using tools like Canva and making of the video using Microsoft Clipchamp. Providing insights, performing research to innovate.
 
 ## Track
 Arctic Analytics: Data & Intelligence
