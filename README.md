@@ -21,11 +21,34 @@ Arctic Analytics: Data & Intelligence
 ProblemStatement #10: Autonomous Security Threat Intelligence Aggregator
 
 ## Documentation Reference
-Link: 
+
+1. **NVD API v2.0 Documentation**  
+   `https://nvd.nist.gov/developers/vulnerabilities`  
+   *CVE data retrieval, CVSS v3/v2 parsing, keyword search parameters*
+
+2. **Sentence Transformers - ATTACK-BERT**  
+   `https://huggingface.co/basel/ATTACK-BERT`  
+   *Cybersecurity-specific embeddings, cosine similarity implementation*
+
+3. **Streamlit Documentation**  
+   `https://docs.streamlit.io/`  
+   *Session state, caching (`@st.cache_resource`), multi-page apps, Plotly integration*
+
+4. **Plotly Express Documentation**  
+   `https://plotly.com/python/plotly-express/`  
+   *Area charts, Gantt timelines, pie charts, heatmaps, color mappings*
+
+5. **ReportLab Documentation**  
+   `https://docs.reportlab.com/reportlab/userguide/`  
+   *PDF generation, Paragraph/Table styling, Image embedding, page layouts*
+
+**Plus Kaleido docs for `pio.to_image()` chart-to-PNG conversion.** 📚🔗
+
+
 
 ## Live Deployment Link
 
-Link: 
+Link: https://arcticsentinel.streamlit.app
 
 ## Video Demonstration Link
 Link: 
