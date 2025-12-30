@@ -166,7 +166,7 @@ if page == "📊 Overview":
         col1, col2, col3 = st.columns(3)
         with col1: st.metric("📅 Earliest", df_timeline['published_date'].min().strftime('%Y-%m-%d'))
         with col2: st.metric("📅 Latest", df_timeline['published_date'].max().strftime('%Y-%m-%d'))
-        with col3: st.metric("📏 Span", f"{(df_timeline['published_date'].max() - df_timeline['published_date'].min()).days}d")
+        with col3: st.metric("📏 Span", f"{(df_timeline['published_date'].max() - df_timeline['published_date'].min()).days} days")
         
         current_time = pd.Timestamp.now()
         df_gantt = df_timeline.head(20).copy()
