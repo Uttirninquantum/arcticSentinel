@@ -101,35 +101,40 @@ df = st.session_state.cross_mapped_data if len(st.session_state.cross_mapped_dat
 has_data = len(df) > 0
 total_threats = len(df)
 
-st.markdown("## 🛡️ Arctic Sentinel")
-page = st.selectbox("📍 Navigate", ["📊 Overview", "🔐 CVE Info", "🎯 MITRE Info", "🔍 Search", "📄 Export PDF"])
+
+col1, col2 = st.columns([1, 1])
+
+with col1:
+    st.markdown("## 🛡️ Arctic Sentinel")
+    page = st.selectbox("📍 Navigate", ["📊 Overview", "🔐 CVE Info", "🎯 MITRE Info", "🔍 Search", "📄 Export PDF"])
+
+with col2:
+    st.markdown("### ⚙️ Controls")
+    if st.button("🔍 Scan CVEs", type="primary", use_container_width=True):
+        if st.session_state.assets_file:
+            with st.spinner("Running pipeline..."):
+                try:
+                    csv_bytes = st.session_state.assets_file.read()
+                    csv_string = csv_bytes.decode('utf-8')
+                    df_assets = pd.read_csv(io.StringIO(csv_string))
+                    pipeline = ThreatTimelinePipeline()
+                    st.session_state.threat_data = pipeline.run_pipeline_csv(df_assets)
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Pipeline error: {str(e)}")
+
+    if st.button("🎯 MITRE Map", type="secondary", use_container_width=True):
+        if len(st.session_state.threat_data) > 0:
+            with st.spinner("Mapping MITRE..."):
+                try:
+                    mapper = MITRECrossMapper(threat_df=st.session_state.threat_data)
+                    st.session_state.cross_mapped_data = mapper.run_mapping()
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"MITRE mapping error: {str(e)}")
 
 st.markdown("---")
-st.subheader("⚙️ Controls")
-if st.button("🔍 Scan CVEs", type="primary"):
-    if st.session_state.assets_file:
-        with st.spinner("Running pipeline..."):
-            try:
-                csv_bytes = st.session_state.assets_file.read()
-                csv_string = csv_bytes.decode('utf-8')
-                df_assets = pd.read_csv(io.StringIO(csv_string))
-                pipeline = ThreatTimelinePipeline()
-                st.session_state.threat_data = pipeline.run_pipeline_csv(df_assets)
-                st.rerun()
-            except Exception as e:
-                st.error(f"Pipeline error: {str(e)}")
 
-if st.button("🎯 MITRE Map"):
-    if len(st.session_state.threat_data) > 0:
-        with st.spinner("Mapping MITRE..."):
-            try:
-                mapper = MITRECrossMapper(threat_df=st.session_state.threat_data)
-                st.session_state.cross_mapped_data = mapper.run_mapping()
-                st.rerun()
-            except Exception as e:
-                st.error(f"MITRE mapping error: {str(e)}")
-                
-st.markdown("---")
 
 if page == "📊 Overview":
     st.markdown("## 📊 Threat Intelligence Overview")
@@ -147,10 +152,10 @@ if page == "📊 Overview":
     col1, col2 = st.columns(2)
     with col1:
         fig_pie = px.pie(df, names='nvd_severity', hole=0.4, title="Severity Distribution")
-        st.plotly_chart(fig_pie, use_container_width=True)
+        st.plotly_chart(fig_pie, width='stretch')
     with col2:
         fig_vendors = px.bar(df['vendor'].value_counts().head(10), title="Top Vendors")
-        st.plotly_chart(fig_vendors, use_container_width=True)
+        st.plotly_chart(fig_vendors, width='stretch')
     
     st.markdown("### 📅 CVE Timeline Analysis")
     df_timeline = df.copy()
@@ -168,7 +173,7 @@ if page == "📊 Overview":
             daily_cves = df_timeline.groupby('published_date').size().reset_index(name='count')
             fig_timeline = px.area(daily_cves, x='published_date', y='count', 
                                   title="Publication Timeline", height=300)
-            st.plotly_chart(fig_timeline, use_container_width=True)
+            st.plotly_chart(fig_timeline, width='stretch')
         
         with col2:
             current_time = pd.Timestamp.now()
@@ -179,7 +184,7 @@ if page == "📊 Overview":
                                    title="CVE Age Gantt (Top 20)", height=300,
                                    color_discrete_map={'CRITICAL': '#dc2626', 'HIGH': '#ea580c'})
             fig_gantt.update_yaxes(autorange="reversed")
-            st.plotly_chart(fig_gantt, use_container_width=True)
+            st.plotly_chart(fig_gantt, width='stretch')
     else:
         st.info("No valid publication dates found")
     
@@ -232,7 +237,7 @@ elif page == "🔐 CVE Info":
     st.markdown("### 🔥 Vendor Risk Matrix")
     vendor_severity = df.groupby(['vendor', 'nvd_severity']).size().unstack(fill_value=0)
     fig_heatmap = px.imshow(vendor_severity, title="Vendor vs Severity", color_continuous_scale="Reds")
-    st.plotly_chart(fig_heatmap, use_container_width=True)
+    st.plotly_chart(fig_heatmap, width='stretch')
     
     st.markdown("### 🔗 Related CVEs (ATTACK-BERT)")
     selected_cve = st.selectbox("Select CVE:", df['cve_id'].unique())
@@ -256,7 +261,7 @@ elif page == "🔐 CVE Info":
     
     st.markdown("### 📋 All CVEs")
     display_cols = ['cve_id', 'vendor', 'product', 'nvd_severity', 'cvss_v3_raw', 'published']
-    st.dataframe(df[display_cols].sort_values('cvss_v3_raw', ascending=False), use_container_width=True)
+    st.dataframe(df[display_cols].sort_values('cvss_v3_raw', ascending=False), width='stretch')
 
 # ============================================
 # PAGE 3: MITRE INFO
@@ -278,7 +283,7 @@ elif page == "🎯 MITRE Info":
     st.markdown("### 📊 Top MITRE Tactics")
     top_mitre = df[mitre_col].value_counts().head(10)
     fig_mitre = px.bar(x=top_mitre.values, y=top_mitre.index, orientation='h', title="MITRE Tactic Frequency")
-    st.plotly_chart(fig_mitre, use_container_width=True)
+    st.plotly_chart(fig_mitre, width='stretch')
     
     selected_mitre = st.selectbox("Select MITRE Tactic:", df[mitre_col].dropna().unique())
     mitre_cves = df[df[mitre_col] == selected_mitre]
@@ -293,7 +298,7 @@ elif page == "🎯 MITRE Info":
     with col2:
         severity_dist = mitre_cves['nvd_severity'].value_counts()
         fig_pie = px.pie(values=severity_dist.values, names=severity_dist.index, title="Severity Distribution")
-        st.plotly_chart(fig_pie, use_container_width=True)
+        st.plotly_chart(fig_pie, width='stretch')
     
     st.markdown("### 🔗 Related MITRE Tactics (BERT)")
     mitre_text = " ".join(df[df[mitre_col] == selected_mitre]['description'].tolist())
@@ -379,7 +384,7 @@ elif page == "📄 Export PDF":
     with col2: st.metric("Critical", len(df[df['nvd_severity']=='CRITICAL']))
     with col3: st.metric("Avg CVSS", f"{df['cvss_v3_raw'].mean():.1f}")
     
-    if st.button("🚀 GENERATE COMPLETE PDF REPORT", type="primary", use_container_width=True):
+    if st.button("🚀 GENERATE COMPLETE PDF REPORT", type="primary", width='stretch'):
         with st.spinner("📄 Creating comprehensive report with ALL charts..."):
             pdf_buffer = io.BytesIO()
             doc = SimpleDocTemplate(pdf_buffer, pagesize=letter)
@@ -456,7 +461,7 @@ elif page == "📄 Export PDF":
                 pdf_buffer.getvalue(),
                 f"arctic_sentinel_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf",
                 "application/pdf",
-                use_container_width=True
+                width='stretch'
             )
             st.balloons()
             st.success("✅ Professional PDF Report Generated!")

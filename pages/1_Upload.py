@@ -43,12 +43,12 @@ if uploaded:
     col1, col2 = st.columns(2)
 
     with col1:
-        st.success("File selected")
+        st.success("File selected", width='stretch')
 
     with col2:
         st.empty()
 
-    if st.button("Upload", type="primary", key="upload_btn"):
+    if st.button("Upload", type="primary", key="upload_btn", width='stretch'):
         st.session_state["file"] = uploaded
         st.switch_page("pages/2_Dashboard.py")
 
