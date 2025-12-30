@@ -297,7 +297,7 @@ elif page == "🎯 MITRE Info":
 # ============================================
 # PAGE 4: SEARCH
 # ============================================
-elif page == "🔍 Search":
+elif page == "🔍 Advanced Filter":
     st.markdown("## 🔍 Advanced Threat Filter")
     
     if not has_data:
