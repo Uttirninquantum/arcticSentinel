@@ -55,13 +55,10 @@ if uploaded:
 
 
 template_data = {
-    "part": ["[part]", "[part]", "[part]", "[part]"],
-    "vendor": ["[vendor]", "[vendor]", "[vendor]", "[vendor]"],
-    "product": ["[product]", "[product]", "[product]", "[product]"],
-    "version": ["[version]", "[version]", "[version]", "[version]"],
-    "cpe_vendor": ["[cpe_vendor]", "[cpe_vendor]", "[cpe_vendor]", "[cpe_vendor]"],
-    "cpe_product": ["[cpe_product]", "[cpe_product]", "[cpe_product]", "[cpe_product]"],
-    "severity": ["[severity]", "[severity]", "[severity]", "[severity]"],
+    "part": ["a", "a", "h", "o"],
+    "vendor": ["nginx", "openssl", "intel", "ubuntu"],
+    "product": ["nginx", "openssl", "cpu", "linux"],
+    "version": ["1.25.3", "3.0.14", "i7-9700K", "20.04"],
 }
 
 df_template = pd.DataFrame(template_data)

@@ -357,95 +357,166 @@ elif page == "🔍 Search":
 elif page == "📄 Export PDF":
     st.markdown("## 📄 Professional PDF Report")
     os.system("plotly_get_chrome -y")
-    
-    
+
     if not has_data:
         st.warning("⚠️ Run analysis first!")
         st.stop()
-    
+
     col1, col2, col3 = st.columns(3)
     with col1: st.metric("Total CVEs", total_threats)
     with col2: st.metric("Critical", len(df[df['nvd_severity']=='CRITICAL']))
     with col3: st.metric("Avg CVSS", f"{df['cvss_v3_raw'].mean():.1f}")
-    
-    if st.button("🚀 GENERATE COMPLETE PDF REPORT", type="primary", width='stretch'):
-        with st.spinner("📄 Creating comprehensive report with ALL charts..."):
-            pdf_buffer = io.BytesIO()
-            doc = SimpleDocTemplate(pdf_buffer, pagesize=letter)
-            styles = getSampleStyleSheet()
-            heading_style = ParagraphStyle('CustomHeading', parent=styles['Heading2'], 
-                                          fontSize=16, textColor=colors.HexColor('#1e3a8a'))
-            body_style = ParagraphStyle('CustomBody', parent=styles['Normal'], fontSize=10)
-            
-            story = []
-            
-            story.append(Paragraph("🛡️ ARCTIC SENTINEL - THREAT INTELLIGENCE REPORT", styles['Heading1']))
-            story.append(Paragraph(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}", body_style))
-            story.append(Spacer(1, 20))
-            
-            critical = len(df[df['nvd_severity'] == 'CRITICAL'])
-            summary = f"<b>Total CVEs:</b> {total_threats} | <b>Critical:</b> {critical} | <b>Avg CVSS:</b> {df['cvss_v3_raw'].mean():.1f}"
-            story.append(Paragraph(summary, body_style))
-            story.append(Spacer(1, 12))
-            
-            # Severity Pie
-            fig_pie = px.pie(df, names='nvd_severity', hole=0.4)
-            pie_png = pio.to_image(fig_pie, format="png", width=500, height=400)
-            story.append(Paragraph("📊 Severity Distribution", heading_style))
-            story.append(Image(pie_png, width=5*inch, height=3.5*inch))
-            story.append(Spacer(1, 12))
-            
-            # Top Vendors
-            fig_vendors = px.bar(df['vendor'].value_counts().head(10), title="Top Vendors")
-            vendors_png = pio.to_image(fig_vendors, format="png", width=500, height=400)
-            story.append(Paragraph("🏢 Top Vulnerable Vendors", heading_style))
-            story.append(Image(vendors_png, width=5*inch, height=3.5*inch))
-            story.append(Spacer(1, 12))
-            
-            # Timeline
-            df_timeline = df.copy()
-            df_timeline['published_date'] = pd.to_datetime(df_timeline['published'], errors='coerce')
-            df_timeline = df_timeline.dropna(subset=['published_date'])
-            if len(df_timeline) > 0:
-                daily_cves = df_timeline.groupby('published_date').size().reset_index(name='count')
-                fig_timeline = px.area(daily_cves, x='published_date', y='count', title="CVE Timeline")
-                timeline_png = pio.to_image(fig_timeline, format="png", width=500, height=400)
-                story.append(Paragraph("📅 CVE Publication Timeline", heading_style))
-                story.append(Image(timeline_png, width=5*inch, height=3.5*inch))
+
+    if st.button("🚀 GENERATE COMPLETE PDF REPORT", type="primary", use_container_width=True):
+        with st.spinner("📄 Creating comprehensive report (tables only)..."):
+            try:
+                pdf_buffer = io.BytesIO()
+                doc = SimpleDocTemplate(pdf_buffer, pagesize=letter)
+                styles = getSampleStyleSheet()
+                heading_style = ParagraphStyle(
+                    'CustomHeading',
+                    parent=styles['Heading2'],
+                    fontSize=16,
+                    textColor=colors.HexColor('#1e3a8a')
+                )
+                body_style = ParagraphStyle(
+                    'CustomBody',
+                    parent=styles['Normal'],
+                    fontSize=10
+                )
+
+                story = []
+
+                story.append(Paragraph("🛡️ ARCTIC SENTINEL - THREAT INTELLIGENCE REPORT", styles['Heading1']))
+                story.append(Paragraph(
+                    f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
+                    body_style
+                ))
+                story.append(Spacer(1, 20))
+
+                critical = len(df[df['nvd_severity'] == 'CRITICAL'])
+                summary = (
+                    f"<b>Total CVEs:</b> {total_threats} | "
+                    f"<b>Critical:</b> {critical} | "
+                    f"<b>Avg CVSS:</b> {df['cvss_v3_raw'].mean():.1f}"
+                )
+                story.append(Paragraph(summary, body_style))
                 story.append(Spacer(1, 12))
-            
-            # CVE Table
-            story.append(Paragraph("📋 Top 20 Critical CVEs", heading_style))
-            cve_data = [['CVE ID', 'Vendor', 'Product', 'Severity', 'CVSS']]
-            for _, row in df.nlargest(20, 'cvss_v3_raw').iterrows():
-                cve_data.append([
-                    str(row['cve_id'])[:15], str(row['vendor'])[:12], str(row['product'])[:12],
-                    row['nvd_severity'], f"{row['cvss_v3_raw']:.1f}"
-                ])
-            cve_table = Table(cve_data, colWidths=[1.2*inch, 1.2*inch, 1.2*inch, 0.8*inch, 0.8*inch])
-            cve_table.setStyle(TableStyle([
-                ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#1e40af')),
-                ('TEXTCOLOR', (0,0), (-1,0), colors.whitesmoke),
-                ('GRID', (0,0), (-1,-1), 0.5, colors.grey),
-                ('FONTSIZE', (0,0), (-1,-1), 8)
-            ]))
-            story.append(cve_table)
-            story.append(PageBreak())
-            
-            # NLP Remediation
-            story.append(Paragraph("🔧 AI-GENERATED REMEDIATION STRATEGY", heading_style))
-            remediation_text = generate_nlp_remediation(df)
-            story.append(Paragraph(remediation_text, body_style))
-            
-            doc.build(story)
-            pdf_buffer.seek(0)
-            
-            st.download_button(
-                "📥 Download Complete Report",
-                pdf_buffer.getvalue(),
-                f"arctic_sentinel_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf",
-                "application/pdf",
-                width='stretch'
-            )
-            st.balloons()
-            st.success("✅ Professional PDF Report Generated!")
+
+                severity_counts = df['nvd_severity'].value_counts().reset_index()
+                severity_counts.columns = ['Severity', 'Count']
+                sev_table_data = [['Severity', 'Count', 'Percent']]
+                for _, row in severity_counts.iterrows():
+                    percent = (row['Count'] / total_threats) * 100
+                    sev_table_data.append([
+                        row['Severity'],
+                        int(row['Count']),
+                        f"{percent:.1f}%"
+                    ])
+
+                sev_table = Table(sev_table_data, colWidths=[1.5*inch, 1.0*inch, 1.2*inch])
+                sev_table.setStyle(TableStyle([
+                    ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#1e40af')),
+                    ('TEXTCOLOR', (0,0), (-1,0), colors.whitesmoke),
+                    ('GRID', (0,0), (-1,-1), 0.5, colors.grey),
+                    ('ALIGN', (1,1), (-1,-1), 'CENTER'),
+                    ('FONTSIZE', (0,0), (-1,-1), 9),
+                ]))
+
+                story.append(Paragraph("📊 Severity Distribution (Table)", heading_style))
+                story.append(sev_table)
+                story.append(Spacer(1, 16))
+
+                vendor_counts = df['vendor'].value_counts().head(10).reset_index()
+                vendor_counts.columns = ['Vendor', 'CVEs']
+                vendor_table_data = [['Vendor', 'CVEs']]
+                for _, row in vendor_counts.iterrows():
+                    vendor_table_data.append([row['Vendor'], int(row['CVEs'])])
+
+                vendor_table = Table(vendor_table_data, colWidths=[3.0*inch, 1.0*inch])
+                vendor_table.setStyle(TableStyle([
+                    ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#1e40af')),
+                    ('TEXTCOLOR', (0,0), (-1,0), colors.whitesmoke),
+                    ('GRID', (0,0), (-1,-1), 0.5, colors.grey),
+                    ('ALIGN', (1,1), (-1,-1), 'CENTER'),
+                    ('FONTSIZE', (0,0), (-1,-1), 9),
+                ]))
+
+                story.append(Paragraph("🏢 Top Vulnerable Vendors", heading_style))
+                story.append(vendor_table)
+                story.append(Spacer(1, 16))
+
+                df_timeline = df.copy()
+                df_timeline['published_date'] = pd.to_datetime(
+                    df_timeline['published'], errors='coerce'
+                )
+                df_timeline = df_timeline.dropna(subset=['published_date'])
+
+                if len(df_timeline) > 0:
+                    daily_cves = (
+                        df_timeline
+                        .groupby(df_timeline['published_date'].dt.date)
+                        .size()
+                        .reset_index(name='count')
+                    )
+                    timeline_data = [['Date', 'CVEs']]
+                    for _, row in daily_cves.iterrows():
+                        timeline_data.append([row['published_date'].strftime('%Y-%m-%d'),
+                                              int(row['count'])])
+
+                    timeline_table = Table(timeline_data, colWidths=[2.0*inch, 1.0*inch])
+                    timeline_table.setStyle(TableStyle([
+                        ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#1e40af')),
+                        ('TEXTCOLOR', (0,0), (-1,0), colors.whitesmoke),
+                        ('GRID', (0,0), (-1,-1), 0.5, colors.grey),
+                        ('ALIGN', (1,1), (-1,-1), 'CENTER'),
+                        ('FONTSIZE', (0,0), (-1,-1), 8),
+                    ]))
+
+                    story.append(Paragraph("📅 CVE Publication Timeline (Daily Counts)", heading_style))
+                    story.append(timeline_table)
+                    story.append(Spacer(1, 16))
+
+                story.append(Paragraph("📋 Top 20 Critical CVEs", heading_style))
+                cve_data = [['CVE ID', 'Vendor', 'Product', 'Severity', 'CVSS']]
+                for _, row in df.nlargest(20, 'cvss_v3_raw').iterrows():
+                    cve_data.append([
+                        str(row['cve_id'])[:15],
+                        str(row['vendor'])[:12],
+                        str(row['product'])[:12],
+                        row['nvd_severity'],
+                        f"{row['cvss_v3_raw']:.1f}"
+                    ])
+
+                cve_table = Table(
+                    cve_data,
+                    colWidths=[1.6*inch, 1.2*inch, 1.4*inch, 0.9*inch, 0.7*inch]
+                )
+                cve_table.setStyle(TableStyle([
+                    ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#1e40af')),
+                    ('TEXTCOLOR', (0,0), (-1,0), colors.whitesmoke),
+                    ('GRID', (0,0), (-1,-1), 0.5, colors.grey),
+                    ('FONTSIZE', (0,0), (-1,-1), 7),
+                ]))
+
+                story.append(cve_table)
+                story.append(PageBreak())
+
+                story.append(Paragraph("🔧 AI-GENERATED REMEDIATION STRATEGY", heading_style))
+                remediation_text = generate_nlp_remediation(df)
+                story.append(Paragraph(remediation_text, body_style))
+
+                doc.build(story)
+                pdf_buffer.seek(0)
+
+                st.download_button(
+                    "📥 Download Complete Report",
+                    pdf_buffer.getvalue(),
+                    f"arctic_sentinel_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf",
+                    "application/pdf",
+                    use_container_width=True
+                )
+                st.balloons()
+                st.success("✅ Professional PDF Report Generated!")
+            except Exception as e:
+                st.error(f"❌ PDF generation failed: {str(e)}")
