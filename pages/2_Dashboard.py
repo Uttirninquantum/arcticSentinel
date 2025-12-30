@@ -1,3 +1,5 @@
+# pages/2_Dashboard.py - COMPLETE FINAL VERSION WITH ALL GRAPHS + FIXED COUNTER
+
 import streamlit as st
 from models.threat_timeline import ThreatTimelinePipeline
 from models.mitre_cross_mapper import MITRECrossMapper
@@ -11,11 +13,6 @@ import requests
 import re
 import numpy as np
 import io
-from reportlab.lib.pagesizes import letter
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak, Image
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib import colors
-from reportlab.lib.units import inch
 import plotly.io as pio
 
 st.set_page_config(page_title="Arctic Sentinel", layout="wide", initial_sidebar_state="expanded")
@@ -52,41 +49,6 @@ def get_similar_cves(df, text, top_k=5):
     
     return similar_df[similar_df['similarity_score'] > 0.5]
 
-def get_similar_mitre(df, mitre_id, top_k=5):
-    """Get similar MITRE tactics"""
-    mitre_cols = [col for col in df.columns if 'mitre_top1' in col]
-    if not mitre_cols:
-        return pd.DataFrame()
-    
-    col = mitre_cols[0]
-    mitre_tactics = df[col].value_counts()
-    return mitre_tactics.head(top_k)
-
-def generate_remediation_nlp(df):
-    """NLP-based remediation generation"""
-    critical_count = len(df[df['nvd_severity'] == 'CRITICAL'])
-    high_count = len(df[df['nvd_severity'] == 'HIGH'])
-    
-    remediation = f"""
-    <b>REMEDIATION STRATEGY (AI-Generated)</b><br/>
-    <br/>
-    <b>Critical Issues:</b> {critical_count} vulnerabilities require immediate action<br/>
-    • Isolate affected systems from network immediately<br/>
-    • Apply emergency patches within 24 hours<br/>
-    • Enable enhanced logging and monitoring<br/>
-    <br/>
-    <b>High Severity:</b> {high_count} vulnerabilities need urgent attention<br/>
-    • Schedule patching within 1 week<br/>
-    • Implement WAF rules for web-based exploits<br/>
-    • Deploy compensating controls if patches unavailable<br/>
-    <br/>
-    <b>Long-term:</b><br/>
-    • Implement vulnerability scanning pipeline<br/>
-    • Establish SLA for patch management<br/>
-    • Conduct security awareness training<br/>
-    """
-    return remediation
-
 # === SESSION STATE ===
 if "threat_data" not in st.session_state:
     st.session_state.threat_data = pd.DataFrame()
@@ -94,8 +56,6 @@ if "cross_mapped_data" not in st.session_state:
     st.session_state.cross_mapped_data = pd.DataFrame()
 if "assets_file" not in st.session_state:
     st.session_state.assets_file = None
-if "total_threats" not in st.session_state:
-    st.session_state.total_threats = 0
 
 if "file" in st.session_state:
     st.session_state.assets_file = st.session_state["file"]
@@ -104,7 +64,7 @@ if "file" in st.session_state:
 # === SIDEBAR ===
 with st.sidebar:
     st.markdown("## 🛡️ Arctic Sentinel")
-    page = st.selectbox("📍 Navigate", ["📊 Overview", "🔐 CVE Info", "🎯 MITRE Info", "🔍 Search", "📄 Export PDF"])
+    page = st.selectbox("📍 Navigate", ["📊 Overview", "🔐 CVE Info", "🎯 MITRE Info","📅 Threat Timeline", "🔍 Search", "📄 Export PDF",])
     
     st.markdown("---")
     st.subheader("⚙️ Controls")
@@ -128,6 +88,7 @@ with st.sidebar:
 # === GET ACTIVE DATA ===
 df = st.session_state.cross_mapped_data if len(st.session_state.cross_mapped_data) > 0 else st.session_state.threat_data
 has_data = len(df) > 0
+total_threats = len(df)
 
 # ============================================
 # PAGE 1: OVERVIEW
@@ -139,14 +100,14 @@ if page == "📊 Overview":
         st.info("👆 Upload CSV → Scan CVEs → MITRE Map")
         st.stop()
     
-    # Metrics
+    # === METRICS (FIXED COUNTER) ===
     col1, col2, col3, col4 = st.columns(4)
-    with col1: st.metric("Total Threats", st.session_state.total_threats)
-    with col2: st.metric("CRITICAL", len(df[df['nvd_severity']=='CRITICAL']))
-    with col3: st.metric("HIGH", len(df[df['nvd_severity']=='HIGH']))
-    with col4: st.metric("Avg CVSS", f"{df['cvss_v3_raw'].fillna(0).mean():.1f}")
+    with col1: st.metric("📊 Total Threats", total_threats)
+    with col2: st.metric("🔴 CRITICAL", len(df[df['nvd_severity']=='CRITICAL']))
+    with col3: st.metric("🟠 HIGH", len(df[df['nvd_severity']=='HIGH']))
+    with col4: st.metric("📈 Avg CVSS", f"{df['cvss_v3_raw'].fillna(0).mean():.1f}")
     
-    # Charts
+    # === CHARTS ===
     col1, col2 = st.columns(2)
     with col1:
         fig_pie = px.pie(df, names='nvd_severity', hole=0.4, title="Severity Distribution")
@@ -155,7 +116,7 @@ if page == "📊 Overview":
         fig_vendors = px.bar(df['vendor'].value_counts().head(10), title="Top Vendors (Vertical)")
         st.plotly_chart(fig_vendors, use_container_width=True)
     
-    # === ATTACK-BERT CUSTOM VULNERABILITY SEARCH ===
+    # === ATTACK-BERT CUSTOM SEARCH ===
     st.markdown("### 🚀 Find Similar CVEs using ATTACK-BERT")
     vuln_text = st.text_area("Enter vulnerability description...", height=100,
                            placeholder="Apache HTTP Server path traversal vulnerability allowing RCE")
@@ -168,7 +129,6 @@ if page == "📊 Overview":
                 if len(similar_cves) > 0:
                     st.success(f"✅ Found {len(similar_cves)} similar CVEs")
                     
-                    # Display similar CVEs
                     for idx, (_, row) in enumerate(similar_cves.iterrows()):
                         with st.expander(f"#{idx+1} {row['cve_id']} (Similarity: {row['similarity_score']:.2%})"):
                             col_a, col_b = st.columns(2)
@@ -180,19 +140,14 @@ if page == "📊 Overview":
                                 st.metric("Published", row['published'])
                             st.write(f"**Description:** {row['description']}")
                             
-                            # Add this CVE to dataset
-                            # ✅ CORRECT - update first, THEN rerun
-                            if st.button("➕ ADD to Dataset", key=f"add_{len(df)}"):  # Unique key
-                                analyzed = analyze_vuln_text_nlp(vuln_text)
-                                new_row = pd.DataFrame([analyzed])
+                            if st.button(f"➕ Add {row['cve_id']}", key=f"add_{idx}_{row['cve_id']}"):
+                                new_row = pd.DataFrame([row.drop('similarity_score')])
                                 if len(st.session_state.cross_mapped_data) > 0:
                                     st.session_state.cross_mapped_data = pd.concat([st.session_state.cross_mapped_data, new_row], ignore_index=True)
                                 else:
                                     st.session_state.threat_data = pd.concat([st.session_state.threat_data, new_row], ignore_index=True)
-    
-                                st.session_state.total_threats = len(st.session_state.cross_mapped_data) + len(st.session_state.threat_data)  # ✅ Force counter update
-                                st.success(f"✅ Added! Total: {st.session_state.total_threats}")
-                                st.rerun()  # ✅ Now runs AFTER update
+                                st.success(f"✅ Added! Total threats: {len(st.session_state.threat_data) + len(st.session_state.cross_mapped_data)}")
+                                st.rerun()
                 else:
                     st.warning("No similar CVEs found (similarity < 0.5)")
 
@@ -206,9 +161,8 @@ elif page == "🔐 CVE Info":
         st.warning("⚠️ Run analysis first!")
         st.stop()
     
-    # Overview metrics
     col1, col2, col3 = st.columns(3)
-    with col1: st.metric("Total CVEs", len(df))
+    with col1: st.metric("Total CVEs", total_threats)
     with col2: st.metric("Unique Vendors", df['vendor'].nunique())
     with col3: st.metric("Avg CVSS", f"{df['cvss_v3_raw'].mean():.1f}")
     
@@ -220,8 +174,6 @@ elif page == "🔐 CVE Info":
     
     # === RELATED CVEs WITH SIMILARITY ===
     st.markdown("### 🔗 Related CVEs (Similarity-Based Grouping)")
-    
-    # Group by similarity
     selected_cve = st.selectbox("Select CVE to find related:", df['cve_id'].unique())
     selected_row = df[df['cve_id'] == selected_cve].iloc[0]
     
@@ -230,8 +182,6 @@ elif page == "🔐 CVE Info":
     
     if len(related) > 0:
         st.success(f"Found {len(related)} related CVEs")
-        
-        # Display as clean cards
         for _, rel_cve in related.iterrows():
             with st.container():
                 col1, col2, col3 = st.columns([2, 1, 1])
@@ -246,13 +196,12 @@ elif page == "🔐 CVE Info":
                     st.metric("Published", rel_cve['published'][:10])
                 st.divider()
     
-    # Common CVEs table
     st.markdown("### 📊 All CVEs Overview")
     display_cols = ['cve_id', 'vendor', 'product', 'nvd_severity', 'cvss_v3_raw', 'published']
     st.dataframe(df[display_cols].sort_values('cvss_v3_raw', ascending=False), use_container_width=True)
 
 # ============================================
-# PAGE 3: MITRE INFO - TACTICS & DESCRIPTIONS
+# PAGE 3: MITRE INFO
 # ============================================
 elif page == "🎯 MITRE Info":
     st.markdown("## 🎯 MITRE ATT&CK Tactics & Techniques")
@@ -269,39 +218,33 @@ elif page == "🎯 MITRE Info":
     mitre_col = mitre_cols[0]
     tactic_col = [col for col in df.columns if 'attack_vector' in col]
     
-    # Top MITRE Techniques
     st.markdown("### 📊 Top MITRE Techniques")
     top_mitre = df[mitre_col].value_counts().head(10)
     fig_mitre = px.bar(x=top_mitre.values, y=top_mitre.index, orientation='h', title="MITRE Technique Frequency")
     st.plotly_chart(fig_mitre, use_container_width=True)
     
-    # === SIMILAR MITRE TACTICS ===
-    st.markdown("### 🔗 Related MITRE Tactics (Similarity)")
+    st.markdown("### 🔗 Related MITRE Tactics")
     selected_mitre = st.selectbox("Select MITRE Technique:", df[mitre_col].dropna().unique())
     
-    # Get all techniques using this tactic
     same_tactic = df[df[mitre_col] == selected_mitre]
     
     if len(same_tactic) > 0:
         st.info(f"**{selected_mitre}** used in {len(same_tactic)} threats")
         
-        # Show tactics description
         tactic_desc = df[df[mitre_col] == selected_mitre]['attack_vector'].iloc[0] if tactic_col and len(same_tactic) > 0 else "N/A"
         st.write(f"**Common Attack Vector:** {tactic_desc}")
         
-        # Severity breakdown for this tactic
         severity_dist = same_tactic['nvd_severity'].value_counts()
         fig_severity = px.pie(values=severity_dist.values, names=severity_dist.index, 
                              title=f"Severity Distribution for {selected_mitre}")
         st.plotly_chart(fig_severity, use_container_width=True)
         
-        # Related CVEs using this tactic
         st.markdown("**CVEs Using This Tactic:**")
         cve_cols = ['cve_id', 'vendor', 'product', 'nvd_severity', 'cvss_v3_raw']
         st.dataframe(same_tactic[cve_cols], use_container_width=True)
 
 # ============================================
-# PAGE 4: ADVANCED SEARCH
+# PAGE 4: SEARCH
 # ============================================
 elif page == "🔍 Search":
     st.markdown("## 🔍 Advanced Threat Search")
@@ -310,7 +253,6 @@ elif page == "🔍 Search":
         st.warning("⚠️ Run analysis first!")
         st.stop()
     
-    # Search controls
     col1, col2, col3 = st.columns(3)
     with col1:
         search_cve = st.text_input("CVE ID", placeholder="CVE-2023-25690")
@@ -327,7 +269,6 @@ elif page == "🔍 Search":
     with col3:
         cvss_min = st.slider("Min CVSS", 0.0, 10.0, 0.0)
     
-    # Apply filters
     results = df.copy()
     if search_cve:
         results = results[results['cve_id'].str.contains(search_cve, case=False, na=False)]
@@ -346,7 +287,6 @@ elif page == "🔍 Search":
     
     st.success(f"✅ **{len(results)}** results found")
     
-    # === CLEAN RESULT ROWS ===
     st.markdown("### 📋 Search Results")
     mitre_cols = [col for col in df.columns if 'mitre_top1' in col]
     
@@ -370,12 +310,11 @@ elif page == "🔍 Search":
                 st.metric("Version", row['version'])
             st.divider()
     
-    # Export
     csv = results.to_csv(index=False).encode()
     st.download_button("💾 Export Results", csv, "search_results.csv", use_container_width=True)
 
 # ============================================
-# PAGE 5: EXPORT PDF
+# PAGE 5: EXPORT PDF WITH GRAPHS
 # ============================================
 elif page == "📄 Export PDF":
     st.markdown("## 📄 Generate Professional PDF Report")
@@ -386,36 +325,58 @@ elif page == "📄 Export PDF":
     
     st.info("Generate comprehensive PDF with all charts, CVE data, and NLP-based remediation")
     
-    if st.button("🚀 Generate & Download PDF", type="primary", use_container_width=True):
-        with st.spinner("📄 Generating PDF..."):
+    # Preview
+    col1, col2, col3 = st.columns(3)
+    with col1: st.metric("Total CVEs", total_threats)
+    with col2: st.metric("Critical", len(df[df['nvd_severity']=='CRITICAL']))
+    with col3: st.metric("Avg CVSS", f"{df['cvss_v3_raw'].mean():.1f}")
+    
+    severity_counts = df['nvd_severity'].value_counts()
+    fig_preview = px.pie(values=severity_counts.values, names=severity_counts.index, hole=0.4)
+    st.plotly_chart(fig_preview, use_container_width=True)
+    
+    if st.button("🚀 GENERATE & DOWNLOAD PDF REPORT", type="primary", use_container_width=True):
+        with st.spinner("📄 Creating professional PDF with graphs..."):
+            from reportlab.lib.pagesizes import letter
+            from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak, Image
+            from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+            from reportlab.lib import colors
+            from reportlab.lib.units import inch
+            
             pdf_buffer = io.BytesIO()
             doc = SimpleDocTemplate(pdf_buffer, pagesize=letter, topMargin=0.5*inch, bottomMargin=0.5*inch)
             
             styles = getSampleStyleSheet()
+            heading_style = ParagraphStyle('CustomHeading', parent=styles['Heading2'], fontSize=16, 
+                                          textColor=colors.HexColor('#1e3a8a'), spaceAfter=12, fontName='Helvetica-Bold')
+            body_style = ParagraphStyle('CustomBody', parent=styles['Normal'], fontSize=10, spaceAfter=8)
+            
             story = []
             
             # Title
             story.append(Paragraph("🛡️ ARCTIC SENTINEL THREAT REPORT", styles['Heading1']))
-            story.append(Paragraph(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}", styles['Normal']))
+            story.append(Paragraph(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}", body_style))
             story.append(Spacer(1, 0.3*inch))
             
             # Executive Summary
-            story.append(Paragraph("📋 Executive Summary", styles['Heading2']))
+            story.append(Paragraph("📋 Executive Summary", heading_style))
+            critical = len(df[df['nvd_severity'] == 'CRITICAL'])
+            high = len(df[df['nvd_severity'] == 'HIGH'])
             summary_text = f"""
-            <b>Total Vulnerabilities:</b> {len(df)}<br/>
-            <b>Critical:</b> {len(df[df['nvd_severity']=='CRITICAL'])} ({len(df[df['nvd_severity']=='CRITICAL'])/max(len(df),1)*100:.1f}%)<br/>
-            <b>High:</b> {len(df[df['nvd_severity']=='HIGH'])}<br/>
+            <b>Total Vulnerabilities:</b> {total_threats}<br/>
+            <b>Critical:</b> {critical} ({critical/max(total_threats,1)*100:.1f}%)<br/>
+            <b>High:</b> {high}<br/>
             <b>Average CVSS:</b> {df['cvss_v3_raw'].mean():.1f}
             """
-            story.append(Paragraph(summary_text, styles['Normal']))
-            story.append(Spacer(1, 0.2*inch))
+            story.append(Paragraph(summary_text, body_style))
+            story.append(Spacer(1, 0.3*inch))
             
             # Severity Table
-            story.append(Paragraph("📊 Vulnerability Breakdown", styles['Heading2']))
+            story.append(Paragraph("📊 Vulnerability Breakdown", heading_style))
             sev_data = [['Severity', 'Count', 'Percentage']]
             for sev in ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW']:
                 count = len(df[df['nvd_severity']==sev])
-                pct = count/max(len(df),1)*100
+                pct = count/max(total_threats,1)*100
                 sev_data.append([sev, str(count), f"{pct:.1f}%"])
             sev_table = Table(sev_data, colWidths=[2*inch]*3)
             sev_table.setStyle(TableStyle([
@@ -427,39 +388,270 @@ elif page == "📄 Export PDF":
             story.append(sev_table)
             story.append(PageBreak())
             
+            # GRAPHS
+            st.markdown("Adding graphs to PDF...")
+            
+            # Graph 1: Severity Pie
+            fig_pie = px.pie(df, names='nvd_severity', hole=0.4, title="Severity Distribution")
+            pie_png = pio.to_image(fig_pie, format="png", width=600, height=400)
+            story.append(Paragraph("📊 Severity Distribution Graph", heading_style))
+            story.append(Image(pie_png, width=5*inch, height=3.5*inch))
+            story.append(Spacer(1, 0.3*inch))
+            
+            # Graph 2: Top Vendors
+            fig_vendors = px.bar(df['vendor'].value_counts().head(10), title="Top Vendors")
+            vendors_png = pio.to_image(fig_vendors, format="png", width=600, height=400)
+            story.append(Paragraph("🏢 Top Vulnerable Vendors", heading_style))
+            story.append(Image(vendors_png, width=5*inch, height=3.5*inch))
+            story.append(Spacer(1, 0.3*inch))
+            story.append(PageBreak())
+            
+            # Graph 3: CVSS Distribution
+            fig_cvss = px.histogram(df, x='cvss_v3_raw', nbins=15, title="CVSS Score Distribution")
+            cvss_png = pio.to_image(fig_cvss, format="png", width=600, height=400)
+            story.append(Paragraph("📈 CVSS Distribution", heading_style))
+            story.append(Image(cvss_png, width=5*inch, height=3.5*inch))
+            story.append(Spacer(1, 0.3*inch))
+            
             # CVE Details
-            story.append(Paragraph("📋 CVE Details", styles['Heading2']))
+            story.append(Paragraph("📋 Top 25 CVE Details", heading_style))
             cve_data = [['CVE ID', 'Vendor', 'Severity', 'CVSS', 'Published']]
-            for _, row in df.head(20).iterrows():
-                cve_data.append([str(row['cve_id'])[:15], str(row['vendor'])[:15], row['nvd_severity'], 
-                               f"{row['cvss_v3_raw']:.1f}", row['published'][:10]])
+            for _, row in df.head(25).iterrows():
+                cve_data.append([str(row['cve_id'])[:15], str(row['vendor'])[:12], row['nvd_severity'], 
+                               f"{row['cvss_v3_raw']:.1f}", str(row['published'])[:10]])
             cve_table = Table(cve_data, colWidths=[1.2*inch]*5)
             cve_table.setStyle(TableStyle([
                 ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#1e40af')),
                 ('TEXTCOLOR', (0,0), (-1,0), colors.whitesmoke),
                 ('GRID', (0,0), (-1,-1), 0.5, colors.grey),
                 ('ALIGN', (0,0), (-1,-1), 'CENTER'),
-                ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.lightblue, colors.white])
+                ('FONTSIZE', (0,0), (-1,-1), 8)
             ]))
             story.append(cve_table)
             story.append(PageBreak())
             
-            # NLP-Based Remediation
-            story.append(Paragraph("🔧 AI-Generated Remediation Strategy", styles['Heading2']))
-            remediation = generate_remediation_nlp(df)
-            story.append(Paragraph(remediation, styles['Normal']))
+            # NLP Remediation
+            story.append(Paragraph("🔧 AI-GENERATED REMEDIATION STRATEGY", heading_style))
+            critical_pct = critical / max(total_threats, 1) * 100
+            remediation_text = f"""
+            <b>IMMEDIATE ACTIONS (0-24 HOURS):</b><br/>
+            • {critical} CRITICAL vulnerabilities ({critical_pct:.1f}%) require IMMEDIATE isolation<br/>
+            • Deploy emergency patches for all CRITICAL CVEs<br/>
+            • Enable enhanced logging and SIEM monitoring<br/>
+            <br/>
+            <b>SHORT-TERM (1-7 DAYS):</b><br/>
+            • Patch {high} HIGH severity vulnerabilities<br/>
+            • Implement WAF rules for web-facing services<br/>
+            • Review network segmentation for affected vendors<br/>
+            <br/>
+            <b>MEDIUM-TERM (1-4 WEEKS):</b><br/>
+            • Conduct vulnerability re-scan verification<br/>
+            • Update IDS/IPS signatures for detected CVEs<br/>
+            • Implement compensating controls for unpatchable systems<br/>
+            <br/>
+            <b>LONG-TERM (1-3 MONTHS):</b><br/>
+            • Deploy automated patch management pipeline<br/>
+            • Establish 72-hour patch SLA for critical systems<br/>
+            • Conduct security awareness training<br/>
+            """
+            story.append(Paragraph(remediation_text, body_style))
             
             doc.build(story)
             pdf_buffer.seek(0)
             
             st.download_button(
-                "📥 Download PDF Report",
-                pdf_buffer,
-                f"arctic_sentinel_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf",
+                "📥 Download Threat Report PDF",
+                pdf_buffer.getvalue(),
+                f"arctic_sentinel_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf",
                 "application/pdf",
                 use_container_width=True
             )
-            st.success("✅ PDF generated successfully!")
+        st.balloons()
+        st.success("✅ PDF Generated Successfully!")
+
+
+
+# ============================================
+# NEW PAGE: THREAT TIMELINE
+# ============================================
+elif page == "📅 Threat Timeline":
+    st.markdown("## 📅 Threat Timeline - CVE Evolution")
+    
+    if not has_data:
+        st.warning("⚠️ Run analysis first!")
+        st.stop()
+    
+    # Prepare timeline data
+    df_timeline = df.copy()
+    df_timeline['published_date'] = pd.to_datetime(df_timeline['published'], format='mixed', errors='coerce')
+    df_timeline = df_timeline.dropna(subset=['published_date'])
+    df_timeline = df_timeline.sort_values('published_date')
+    
+    if len(df_timeline) == 0:
+        st.warning("No CVEs with valid dates")
+        st.stop()
+    
+    # === TIMELINE STATISTICS ===
+    st.markdown("### 📊 Timeline Statistics")
+    col1, col2, col3, col4 = st.columns(4)
+    with col1:
+        earliest = df_timeline['published_date'].min()
+        st.metric("Earliest CVE", earliest.strftime('%Y-%m-%d'))
+    with col2:
+        latest = df_timeline['published_date'].max()
+        st.metric("Latest CVE", latest.strftime('%Y-%m-%d'))
+    with col3:
+        days_span = (latest - earliest).days
+        st.metric("Span (days)", days_span)
+    with col4:
+        st.metric("Total CVEs", len(df_timeline))
+    
+    # === INTERACTIVE TIMELINE CHART ===
+    st.markdown("### 📈 CVE Publication Timeline")
+    
+    # Group by date
+    daily_cves = df_timeline.groupby('published_date').size().reset_index(name='count')
+    fig_timeline = px.area(daily_cves, x='published_date', y='count', 
+                          title="CVEs Published Over Time",
+                          labels={'published_date': 'Date', 'count': 'Number of CVEs'},
+                          markers=True)
+    fig_timeline.update_layout(hovermode='x unified')
+    st.plotly_chart(fig_timeline, use_container_width=True)
+    
+    # === SEVERITY OVER TIME ===
+    st.markdown("### 🔴 Severity Evolution Over Time")
+    severity_timeline = df_timeline.groupby(['published_date', 'nvd_severity']).size().reset_index(name='count')
+    fig_severity_time = px.area(severity_timeline, x='published_date', y='count', color='nvd_severity',
+                               title="Severity Distribution Over Time",
+                               color_discrete_map={
+                                   'CRITICAL': '#dc2626',
+                                   'HIGH': '#ea580c',
+                                   'MEDIUM': '#f59e0b',
+                                   'LOW': '#10b981'
+                               })
+    st.plotly_chart(fig_severity_time, use_container_width=True)
+    
+    # === VENDOR EMERGENCE ===
+    st.markdown("### 🏢 Vendor Timeline - First Appearance")
+    vendor_first = df_timeline.groupby('vendor')['published_date'].min().reset_index().sort_values('published_date')
+    fig_vendor_timeline = px.scatter(vendor_first, x='published_date', y='vendor', 
+                                     title="Vendor First CVE Appearance",
+                                     labels={'published_date': 'First CVE Date', 'vendor': 'Vendor'},
+                                     size_max=15)
+    st.plotly_chart(fig_vendor_timeline, use_container_width=True)
+    
+    # === CUMULATIVE THREATS ===
+    st.markdown("### 📈 Cumulative Threat Growth")
+    df_timeline_sorted = df_timeline.sort_values('published_date')
+    df_timeline_sorted['cumulative'] = range(1, len(df_timeline_sorted) + 1)
+    fig_cumulative = px.line(df_timeline_sorted, x='published_date', y='cumulative',
+                            title="Cumulative CVE Growth",
+                            labels={'published_date': 'Date', 'cumulative': 'Total CVEs'},
+                            markers=True)
+    st.plotly_chart(fig_cumulative, use_container_width=True)
+    
+    # === DETAILED TIMELINE TABLE ===
+    st.markdown("### 📋 Detailed Timeline (Sorted by Date)")
+    
+    # Group by time periods
+    time_period = st.selectbox("Group by:", ["Daily", "Weekly", "Monthly", "Yearly"])
+    
+    if time_period == "Daily":
+        grouped = df_timeline.groupby(df_timeline['published_date'].dt.date).apply(
+            lambda x: pd.Series({
+                'date': x['published_date'].iloc[0].date(),
+                'count': len(x),
+                'critical': len(x[x['nvd_severity']=='CRITICAL']),
+                'high': len(x[x['nvd_severity']=='HIGH']),
+                'avg_cvss': x['cvss_v3_raw'].mean()
+            })
+        ).reset_index(drop=True)
+    elif time_period == "Weekly":
+        grouped = df_timeline.groupby(df_timeline['published_date'].dt.isocalendar().week).apply(
+            lambda x: pd.Series({
+                'week': x['published_date'].dt.isocalendar().week.iloc[0],
+                'year': x['published_date'].dt.year.iloc[0],
+                'count': len(x),
+                'critical': len(x[x['nvd_severity']=='CRITICAL']),
+                'high': len(x[x['nvd_severity']=='HIGH']),
+                'avg_cvss': x['cvss_v3_raw'].mean()
+            })
+        ).reset_index(drop=True)
+    elif time_period == "Monthly":
+        grouped = df_timeline.groupby(df_timeline['published_date'].dt.to_period('M')).apply(
+            lambda x: pd.Series({
+                'period': str(x['published_date'].iloc[0].date())[:7],
+                'count': len(x),
+                'critical': len(x[x['nvd_severity']=='CRITICAL']),
+                'high': len(x[x['nvd_severity']=='HIGH']),
+                'avg_cvss': x['cvss_v3_raw'].mean()
+            })
+        ).reset_index(drop=True)
+    else:  # Yearly
+        grouped = df_timeline.groupby(df_timeline['published_date'].dt.year).apply(
+            lambda x: pd.Series({
+                'year': x['published_date'].dt.year.iloc[0],
+                'count': len(x),
+                'critical': len(x[x['nvd_severity']=='CRITICAL']),
+                'high': len(x[x['nvd_severity']=='HIGH']),
+                'avg_cvss': x['cvss_v3_raw'].mean()
+            })
+        ).reset_index(drop=True)
+    
+    st.dataframe(grouped.round(2), use_container_width=True)
+    
+    # === CVE TIMELINE GANTT ===
+    st.markdown("### 📅 CVE Timeline Gantt Chart (Top 50)")
+    df_gantt = df_timeline.head(50).copy()
+    df_gantt['current_date'] = pd.Timestamp.now()
+    df_gantt['days_since'] = (df_gantt['current_date'] - df_gantt['published_date']).dt.days
+    
+    fig_gantt = px.timeline(df_gantt, x_start="published_date", x_end="current_date",
+                           y="cve_id", color="nvd_severity",
+                           color_discrete_map={
+                               'CRITICAL': '#dc2626',
+                               'HIGH': '#ea580c',
+                               'MEDIUM': '#f59e0b',
+                               'LOW': '#10b981'
+                           },
+                           title="CVE Age Timeline (Last 50 CVEs)")
+    st.plotly_chart(fig_gantt, use_container_width=True)
+    
+    # === THREAT HEAT MAP BY DATE ===
+    st.markdown("### 🔥 Threat Intensity Heatmap")
+    df_timeline['month'] = df_timeline['published_date'].dt.strftime('%Y-%m')
+    df_timeline['day_of_week'] = df_timeline['published_date'].dt.day_name()
+    
+    heatmap_data = df_timeline.pivot_table(
+        values='cvss_v3_raw', 
+        index='day_of_week', 
+        columns='month', 
+        aggfunc='count',
+        fill_value=0
+    )
+    
+    fig_heatmap = px.imshow(heatmap_data, title="CVE Publication Heatmap", 
+                           color_continuous_scale="YlOrRd", aspect="auto")
+    st.plotly_chart(fig_heatmap, use_container_width=True)
+    
+    # === INSIGHTS ===
+    st.markdown("### 💡 Timeline Insights")
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        peak_month = df_timeline.groupby(df_timeline['published_date'].dt.to_period('M')).size().idxmax()
+        peak_count = df_timeline.groupby(df_timeline['published_date'].dt.to_period('M')).size().max()
+        st.info(f"📌 **Peak Month:** {peak_month} **CVEs:** {peak_count}")
+    
+    with col2:
+        avg_per_month = len(df_timeline) / (days_span / 30)
+        st.info(f"📊 **Avg CVEs/Month:** {avg_per_month:.1f}**Trend:** {'📈 Increasing' if df_timeline.groupby(df_timeline['published_date'].dt.to_period('M')).size().iloc[-1] > avg_per_month else '📉 Decreasing'}")
+    
+    with col3:
+        critical_trend = len(df_timeline[df_timeline['nvd_severity']=='CRITICAL']) / max(len(df_timeline), 1) * 100
+        st.info(f"🚨 **Critical %:** {critical_trend:.1f}%**Action:** {'URGENT' if critical_trend > 20 else 'NORMAL'}")
+    
+    
 
 st.markdown("---")
-st.markdown("🛡️ Arctic Sentinel | Powered by ATTACK-BERT + NLP")
+st.markdown("🛡️ Arctic Sentinel | Powered by ATTACK-BERT + NLP | Production Ready")
