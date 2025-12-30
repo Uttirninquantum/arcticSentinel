@@ -48,7 +48,6 @@ def load_bert_model():
 bert_model = load_bert_model()
 
 def get_similar_cves(df, text, top_k=5):
-    """Find similar CVEs using ATTACK-BERT embeddings (20% threshold)"""
     if len(df) == 0 or pd.isna(text):
         return pd.DataFrame()
     try:
@@ -58,12 +57,11 @@ def get_similar_cves(df, text, top_k=5):
         top_indices = np.argsort(similarities)[::-1][:top_k]
         similar_df = df.iloc[top_indices].copy()
         similar_df['similarity_score'] = similarities[top_indices]
-        return similar_df[similar_df['similarity_score'] > 0.2]  # 20% threshold
+        return similar_df[similar_df['similarity_score'] > 0.2]
     except:
         return pd.DataFrame()
 
 def generate_nlp_remediation(df):
-    """Generate dynamic NLP-based remediation steps"""
     critical_count = len(df[df['nvd_severity'] == 'CRITICAL'])
     high_count = len(df[df['nvd_severity'] == 'HIGH'])
     top_vendors = df['vendor'].value_counts().head(3).index.tolist()
@@ -87,7 +85,6 @@ def generate_nlp_remediation(df):
     """
     return remediation
 
-# === SESSION STATE ===
 if "threat_data" not in st.session_state: st.session_state.threat_data = pd.DataFrame()
 if "cross_mapped_data" not in st.session_state: st.session_state.cross_mapped_data = pd.DataFrame()
 if "assets_file" not in st.session_state: st.session_state.assets_file = None
@@ -96,7 +93,6 @@ if "file" in st.session_state:
     st.session_state.assets_file = st.session_state["file"]
     del st.session_state["file"]
 
-# === SIDEBAR ===
 with st.sidebar:
     st.markdown("## 🛡️ Arctic Sentinel")
     page = st.selectbox("📍 Navigate", ["📊 Overview", "🔐 CVE Info", "🎯 MITRE Info", "🔍 Search", "📄 Export PDF"])
@@ -126,14 +122,11 @@ with st.sidebar:
                 except Exception as e:
                     st.error(f"MITRE mapping error: {str(e)}")
 
-# === GET ACTIVE DATA ===
 df = st.session_state.cross_mapped_data if len(st.session_state.cross_mapped_data) > 0 else st.session_state.threat_data
 has_data = len(df) > 0
 total_threats = len(df)
 
-# ============================================
-# PAGE 1: OVERVIEW (PIE + HISTOGRAM + TIMELINE + TEXT-TO-VULN)
-# ============================================
+
 if page == "📊 Overview":
     st.markdown("## 📊 Threat Intelligence Overview")
     
@@ -141,14 +134,12 @@ if page == "📊 Overview":
         st.info("👆 Upload CSV → Scan CVEs → MITRE Map")
         st.stop()
     
-    # === METRICS ===
     col1, col2, col3, col4 = st.columns(4)
     with col1: st.metric("📊 Total Threats", total_threats)
     with col2: st.metric("🔴 CRITICAL", len(df[df['nvd_severity']=='CRITICAL']))
     with col3: st.metric("🟠 HIGH", len(df[df['nvd_severity']=='HIGH']))
     with col4: st.metric("📈 Avg CVSS", f"{df['cvss_v3_raw'].fillna(0).mean():.1f}")
     
-    # === PIE + VENDOR HISTOGRAM ===
     col1, col2 = st.columns(2)
     with col1:
         fig_pie = px.pie(df, names='nvd_severity', hole=0.4, title="Severity Distribution")
@@ -157,7 +148,6 @@ if page == "📊 Overview":
         fig_vendors = px.bar(df['vendor'].value_counts().head(10), title="Top Vendors")
         st.plotly_chart(fig_vendors, use_container_width=True)
     
-    # === TIMELINE SECTION ===
     st.markdown("### 📅 CVE Timeline Analysis")
     df_timeline = df.copy()
     df_timeline['published_date'] = pd.to_datetime(df_timeline['published'], errors='coerce')
@@ -189,8 +179,7 @@ if page == "📊 Overview":
     else:
         st.info("No valid publication dates found")
     
-    # === TEXT-TO-VULN SEARCH ===
-    st.markdown("### 🚀 Text-to-Vulnerability Search (ATTACK-BERT)")
+    st.markdown("### 🚀 Text to Vulnerability Search (ATTACK-BERT)")
     vuln_text = st.text_area("Enter vulnerability description...", height=120,
                            placeholder="Apache HTTP Server path traversal allowing RCE via crafted request")
     
@@ -223,9 +212,7 @@ if page == "📊 Overview":
                 else:
                     st.warning("❌ No similar CVEs found (threshold: 20%)")
 
-# ============================================
-# PAGE 2: CVE INFO
-# ============================================
+
 elif page == "🔐 CVE Info":
     st.markdown("## 🔐 CVE Intelligence & Relationships")
     
@@ -361,7 +348,7 @@ elif page == "🔍 Search":
             with col1: st.markdown(f"**🏢 {row['vendor']}**")
             with col2: st.markdown(f"**📦 {row['product']}**")
             with col3: st.markdown(f"**🔢 {row['cve_id']}**")
-            with col4: st.markdown(row['description'][:150] + "...")
+            with col4: st.markdown(row['description'] + "...")
             with col5: 
                 if mitre_col and pd.notna(row[mitre_col]):
                     st.markdown(f"**🎯 {row[mitre_col]}**")
