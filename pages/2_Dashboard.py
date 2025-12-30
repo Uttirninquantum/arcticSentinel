@@ -94,6 +94,8 @@ if "cross_mapped_data" not in st.session_state:
     st.session_state.cross_mapped_data = pd.DataFrame()
 if "assets_file" not in st.session_state:
     st.session_state.assets_file = None
+if "total_threats" not in st.session_state:
+    st.session_state.total_threats = 0
 
 if "file" in st.session_state:
     st.session_state.assets_file = st.session_state["file"]
@@ -139,7 +141,7 @@ if page == "📊 Overview":
     
     # Metrics
     col1, col2, col3, col4 = st.columns(4)
-    with col1: st.metric("Total Threats", len(df))
+    with col1: st.metric("Total Threats", st.session_state.total_threats)
     with col2: st.metric("CRITICAL", len(df[df['nvd_severity']=='CRITICAL']))
     with col3: st.metric("HIGH", len(df[df['nvd_severity']=='HIGH']))
     with col4: st.metric("Avg CVSS", f"{df['cvss_v3_raw'].fillna(0).mean():.1f}")
@@ -179,14 +181,18 @@ if page == "📊 Overview":
                             st.write(f"**Description:** {row['description']}")
                             
                             # Add this CVE to dataset
-                            if st.button(f"➕ Add {row['cve_id']}", key=f"add_{idx}"):
-                                new_row = pd.DataFrame([row.drop('similarity_score')])
+                            # ✅ CORRECT - update first, THEN rerun
+                            if st.button("➕ ADD to Dataset", key=f"add_{len(df)}"):  # Unique key
+                                analyzed = analyze_vuln_text_nlp(vuln_text)
+                                new_row = pd.DataFrame([analyzed])
                                 if len(st.session_state.cross_mapped_data) > 0:
                                     st.session_state.cross_mapped_data = pd.concat([st.session_state.cross_mapped_data, new_row], ignore_index=True)
                                 else:
                                     st.session_state.threat_data = pd.concat([st.session_state.threat_data, new_row], ignore_index=True)
-                                st.success("✅ Added to dataset!")
-                                st.rerun()
+    
+                                st.session_state.total_threats = len(st.session_state.cross_mapped_data) + len(st.session_state.threat_data)  # ✅ Force counter update
+                                st.success(f"✅ Added! Total: {st.session_state.total_threats}")
+                                st.rerun()  # ✅ Now runs AFTER update
                 else:
                     st.warning("No similar CVEs found (similarity < 0.5)")
 
