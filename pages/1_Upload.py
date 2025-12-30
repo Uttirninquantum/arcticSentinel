@@ -1,4 +1,5 @@
 import streamlit as st
+import pandas as pd
 
 st.set_page_config(page_title="Upload File", layout="wide")
 
@@ -43,13 +44,29 @@ if uploaded:
     col1, col2 = st.columns(2)
 
     with col1:
-        st.success("File selected", width='stretch')
+        st.success("File selected", width="stretch")
 
     with col2:
         st.empty()
 
-    if st.button("Upload", type="primary", key="upload_btn", width='stretch'):
+    if st.button("Upload", type="primary", key="upload_btn", width="stretch"):
         st.session_state["file"] = uploaded
         st.switch_page("pages/2_Dashboard.py")
+
+
+template_data = {
+    "part": ["[part]", "[part]", "[part]", "[part]"],
+    "vendor": ["[vendor]", "[vendor]", "[vendor]", "[vendor]"],
+    "product": ["[product]", "[product]", "[product]", "[product]"],
+    "version": ["[version]", "[version]", "[version]", "[version]"],
+    "cpe_vendor": ["[cpe_vendor]", "[cpe_vendor]", "[cpe_vendor]", "[cpe_vendor]"],
+    "cpe_product": ["[cpe_product]", "[cpe_product]", "[cpe_product]", "[cpe_product]"],
+    "severity": ["[severity]", "[severity]", "[severity]", "[severity]"],
+}
+
+df_template = pd.DataFrame(template_data)
+
+st.markdown("## 📋 CSV Template")
+st.dataframe(df_template, use_container_width=True)
 
 st.markdown("</div></div>", unsafe_allow_html=True)
