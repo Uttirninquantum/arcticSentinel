@@ -17,7 +17,8 @@ st.markdown(
 )
 
 st.subheader("Choose File")
-st.caption("Upload a .csv file containing asset data to begin analysis. You may use the sample file provided in the github repository. For individual testing, another interface will be available.")
+st.caption("Upload your assest list , please note the format of the asses list as follows")
+st.caption("part ( a for application , o for operating system and h for hardware ) , vendor , product , version ") 
 
 uploaded = st.file_uploader(
     "", type=["csv"], label_visibility="collapsed"
