@@ -53,6 +53,9 @@ Link: https://arcticsentinel.streamlit.app
 ## Video Demonstration Link
 Link: 
 
+## Presentation Link
+Link: https://www.canva.com/design/DAG8-Fu_p0k/Ji80loMJRxg5wAcqUVMK7Q/view?utm_content=DAG8-Fu_p0k&utm_campaign=designshare&utm_medium=link2&utm_source=uniquelinks&utlId=hd5383fbc38
+
 ## Tech Stack (Inclusive of Justification of Use)
 Primary Programming Language: Python
 
