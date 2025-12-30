@@ -168,23 +168,15 @@ if page == "📊 Overview":
         with col2: st.metric("📅 Latest", df_timeline['published_date'].max().strftime('%Y-%m-%d'))
         with col3: st.metric("📏 Span", f"{(df_timeline['published_date'].max() - df_timeline['published_date'].min()).days}d")
         
-        col1, col2 = st.columns(2)
-        with col1:
-            daily_cves = df_timeline.groupby('published_date').size().reset_index(name='count')
-            fig_timeline = px.area(daily_cves, x='published_date', y='count', 
-                                  title="Publication Timeline", height=300)
-            st.plotly_chart(fig_timeline, width='stretch')
-        
-        with col2:
-            current_time = pd.Timestamp.now()
-            df_gantt = df_timeline.head(20).copy()
-            df_gantt['end_date'] = current_time
-            fig_gantt = px.timeline(df_gantt, x_start="published_date", x_end="end_date",
-                                   y="cve_id", color="nvd_severity",
-                                   title="CVE Age Gantt (Top 20)", height=300,
-                                   color_discrete_map={'CRITICAL': '#dc2626', 'HIGH': '#ea580c'})
-            fig_gantt.update_yaxes(autorange="reversed")
-            st.plotly_chart(fig_gantt, width='stretch')
+        current_time = pd.Timestamp.now()
+        df_gantt = df_timeline.head(20).copy()
+        df_gantt['end_date'] = current_time
+        fig_gantt = px.timeline(df_gantt, x_start="published_date", x_end="end_date",
+                                y="cve_id", color="nvd_severity",
+                                title="CVE Age Gantt (Top 20)", height=300,
+                                color_discrete_map={'CRITICAL': '#dc2626', 'HIGH': '#ea580c'})
+        fig_gantt.update_yaxes(autorange="reversed")
+        st.plotly_chart(fig_gantt, width='stretch')
     else:
         st.info("No valid publication dates found")
     
