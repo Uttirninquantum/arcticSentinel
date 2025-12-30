@@ -1,7 +1,7 @@
 # Arctic Sentinel
 CODE@FROST 2025 Hackathon Team
 
-> **Note:** This project auto-updates the CVE list on startup. When cloned and run for the first time it will clone the entire <a href="https://github.com/CVEProject/cvelistV5">cvelistV5</a> repository by <a href="https://github.com/CVEProject">CVEProject</a>.
+
 
 ## Team
 ### Team Name
@@ -32,13 +32,23 @@ Link:
 ## Tech Stack (Inclusive of Justification of Use)
 Primary Programming Language: Python
 
-
 Frontend Framework (or Library): ```streamlit```
 
-Backend Framework (or Libraries): Core Python Libraries
+
+Tech Stack: ATTACK-BERT embeddings, Plotly interactive viz, ReportLab PDF generation, real-time session state, production error handling. Fully functional threat intel platform with ML-powered similarity matching and automated reporting.
+
 
 ## Summary of Idea
-Summary
+Arctic Sentinel is a Streamlit-based CVE threat analysis platform with 5 integrated pages:Core Features:
+
+📊 Overview: Real-time metrics, severity pie charts, vendor histograms, CVE timelines (publication trends + Gantt age visualization), ATTACK-BERT text-to-vulnerability search (20% threshold) with live dataset augmentation
+
+🔐 CVE Intelligence: Vendor risk heatmaps, BERT-powered related CVE discovery with similarity scores, complete CVE catalog
+
+🎯 MITRE ATT&CK: Tactic frequency analysis, semantic tactic relationships, attack vector breakdowns🔍 Advanced Search: Multi-parameter filtering with row-formatted results (vendor/product/CVE/MITRE/description)
+
+📄 PDF Export: One-click professional reports embedding all charts + dynamic NLP remediation strategies
+
 
 ## Attributions
 1. CVE
