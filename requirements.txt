@@ -46,4 +46,4 @@ torch
 streamlit
 plotly
 reportlab
-kaledio
+kaleido
