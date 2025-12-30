@@ -16,7 +16,6 @@ from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, Tabl
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib import colors
 from reportlab.lib.units import inch
-from reportlab.enum.text import TA_CENTER, TA_JUSTIFY
 import plotly.io as pio
 
 st.set_page_config(page_title="Arctic Sentinel", layout="wide", initial_sidebar_state="expanded")
