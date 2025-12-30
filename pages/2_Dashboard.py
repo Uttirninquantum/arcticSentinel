@@ -30,15 +30,19 @@ warnings.filterwarnings('ignore')
 
 st.set_page_config(page_title="Arctic Sentinel", layout="wide", initial_sidebar_state="expanded")
 
-st.markdown("""
+st.markdown(
+    """
 <style>
     section[data-testid="stSidebar"] {
-        width: 320px !important;
-        background: linear-gradient(180deg, #1e3a8a 0%, #1e40af 100%);
-        color: white;
+        display: none !important;
     }
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    header {visibility: hidden;}
 </style>
-""", unsafe_allow_html=True)
+""",
+    unsafe_allow_html=True,
+)
 
 # === LOAD ATTACK-BERT ===
 @st.cache_resource
@@ -93,39 +97,39 @@ if "file" in st.session_state:
     st.session_state.assets_file = st.session_state["file"]
     del st.session_state["file"]
 
-with st.sidebar:
-    st.markdown("## 🛡️ Arctic Sentinel")
-    page = st.selectbox("📍 Navigate", ["📊 Overview", "🔐 CVE Info", "🎯 MITRE Info", "🔍 Search", "📄 Export PDF"])
-    
-    st.markdown("---")
-    st.subheader("⚙️ Controls")
-    if st.button("🔍 Scan CVEs", type="primary"):
-        if st.session_state.assets_file:
-            with st.spinner("Running pipeline..."):
-                try:
-                    csv_bytes = st.session_state.assets_file.read()
-                    csv_string = csv_bytes.decode('utf-8')
-                    df_assets = pd.read_csv(io.StringIO(csv_string))
-                    pipeline = ThreatTimelinePipeline()
-                    st.session_state.threat_data = pipeline.run_pipeline_csv(df_assets)
-                    st.rerun()
-                except Exception as e:
-                    st.error(f"Pipeline error: {str(e)}")
-    
-    if st.button("🎯 MITRE Map"):
-        if len(st.session_state.threat_data) > 0:
-            with st.spinner("Mapping MITRE..."):
-                try:
-                    mapper = MITRECrossMapper(threat_df=st.session_state.threat_data)
-                    st.session_state.cross_mapped_data = mapper.run_mapping()
-                    st.rerun()
-                except Exception as e:
-                    st.error(f"MITRE mapping error: {str(e)}")
-
 df = st.session_state.cross_mapped_data if len(st.session_state.cross_mapped_data) > 0 else st.session_state.threat_data
 has_data = len(df) > 0
 total_threats = len(df)
 
+st.markdown("## 🛡️ Arctic Sentinel")
+page = st.selectbox("📍 Navigate", ["📊 Overview", "🔐 CVE Info", "🎯 MITRE Info", "🔍 Search", "📄 Export PDF"])
+
+st.markdown("---")
+st.subheader("⚙️ Controls")
+if st.button("🔍 Scan CVEs", type="primary"):
+    if st.session_state.assets_file:
+        with st.spinner("Running pipeline..."):
+            try:
+                csv_bytes = st.session_state.assets_file.read()
+                csv_string = csv_bytes.decode('utf-8')
+                df_assets = pd.read_csv(io.StringIO(csv_string))
+                pipeline = ThreatTimelinePipeline()
+                st.session_state.threat_data = pipeline.run_pipeline_csv(df_assets)
+                st.rerun()
+            except Exception as e:
+                st.error(f"Pipeline error: {str(e)}")
+
+if st.button("🎯 MITRE Map"):
+    if len(st.session_state.threat_data) > 0:
+        with st.spinner("Mapping MITRE..."):
+            try:
+                mapper = MITRECrossMapper(threat_df=st.session_state.threat_data)
+                st.session_state.cross_mapped_data = mapper.run_mapping()
+                st.rerun()
+            except Exception as e:
+                st.error(f"MITRE mapping error: {str(e)}")
+                
+st.markdown("---")
 
 if page == "📊 Overview":
     st.markdown("## 📊 Threat Intelligence Overview")
