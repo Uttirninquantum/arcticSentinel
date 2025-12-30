@@ -45,3 +45,4 @@ sentence-transformers
 torch
 streamlit
 plotly
+reportlab
