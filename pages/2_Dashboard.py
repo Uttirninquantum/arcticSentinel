@@ -1,5 +1,3 @@
-# pages/2_Dashboard.py - PERFECT 5-PAGE STRUCTURE WITH TIMELINE IN OVERVIEW
-
 import streamlit as st
 from models.threat_timeline import ThreatTimelinePipeline
 from models.mitre_cross_mapper import MITRECrossMapper
@@ -19,8 +17,9 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib import colors
 from reportlab.lib.units import inch
 import warnings
-# FIX KALEIDO CHROME ERROR - ADD THIS AT TOP
 import kaleido
+import os
+
 try:
     kaleido.get_chrome()
     print("✅ Chrome installed for PDF export")
@@ -377,6 +376,8 @@ elif page == "🔍 Search":
 # ============================================
 elif page == "📄 Export PDF":
     st.markdown("## 📄 Professional PDF Report")
+    os.system("plotly_get_chrome -y")
+    
     
     if not has_data:
         st.warning("⚠️ Run analysis first!")

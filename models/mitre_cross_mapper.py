@@ -1,4 +1,3 @@
-# models/mitre_cross_mapper.py - ORIGINAL FULL VERSION
 import pandas as pd
 import numpy as np
 import torch
@@ -7,10 +6,10 @@ from sklearn.metrics.pairwise import cosine_similarity
 from typing import List, Dict
 import requests
 
+
 class MITRECrossMapper:
     def __init__(self, input_csv: str = None, threat_df: pd.DataFrame = None):
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
-        print(f"🧠 MITRE CROSS-MAPPER ({self.device})")
         
         if input_csv:
             self.threat_df = pd.read_csv(input_csv)
@@ -19,14 +18,11 @@ class MITRECrossMapper:
         else:
             raise ValueError("Provide either input_csv or threat_df")
         
-        print(f"📊 Loaded {len(self.threat_df)} threats")
         
-        # Precompute CVE embeddings
         self.model = SentenceTransformer('basel/ATTACK-BERT', device=self.device)
         self.cve_descriptions = self.threat_df['description'].fillna('').tolist()
         self.cve_embeddings = self.model.encode(self.cve_descriptions, batch_size=32, show_progress_bar=False)
         
-        # MITRE TECHNIQUES
         self.mitre_techniques_df = self._load_mitre_techniques()
         self.mitre_techniques_emb = self.model.encode(
             self.mitre_techniques_df['full_text'].tolist(),
@@ -34,7 +30,6 @@ class MITRECrossMapper:
             convert_to_numpy=True
         )
         
-        # MITRE TACTICS
         self.mitre_tactics_df = self._load_mitre_tactics()
         self.mitre_tactics_emb = self.model.encode(
             self.mitre_tactics_df['description'].tolist(),
@@ -42,10 +37,8 @@ class MITRECrossMapper:
             convert_to_numpy=True
         )
         
-        print(f"✅ CVE emb: {self.cve_embeddings.shape}, Tech: {self.mitre_techniques_emb.shape}")
     
     def _load_mitre_tactics(self) -> pd.DataFrame:
-        """Load MITRE TACTICS with FULL descriptions"""
         url = "https://raw.githubusercontent.com/mitre/cti/master/enterprise-attack/enterprise-attack.json"
         data = requests.get(url).json()
         tactics = {}
@@ -62,7 +55,6 @@ class MITRECrossMapper:
         return pd.DataFrame(list(tactics.values()))
     
     def _load_mitre_techniques(self) -> pd.DataFrame:
-        """Load MITRE TECHNIQUES with enriched descriptions"""
         url = "https://raw.githubusercontent.com/mitre/cti/master/enterprise-attack/enterprise-attack.json"
         data = requests.get(url).json()
         techniques = []
@@ -84,7 +76,6 @@ class MITRECrossMapper:
         return pd.DataFrame(techniques)
     
     def get_similar_cves(self, cve_idx: int, top_k: int = 5) -> List[Dict]:
-        """Get EXACTLY TOP 5 similar CVEs - GUARANTEED"""
         if len(self.cve_embeddings) <= 1:
             return []
         sims = cosine_similarity([self.cve_embeddings[cve_idx]], self.cve_embeddings)[0]
@@ -97,7 +88,6 @@ class MITRECrossMapper:
         } for idx in top_indices if idx != cve_idx][:top_k]
     
     def get_similar_mitre(self, cve_desc: str, top_k: int = 5) -> List[Dict]:
-        """Get EXACTLY TOP 5 MITRE techniques - GUARANTEED"""
         cve_emb = self.model.encode([cve_desc])
         tech_sims = cosine_similarity(cve_emb, self.mitre_techniques_emb)[0]
         top_indices = np.argsort(tech_sims)[::-1][:top_k]
@@ -110,13 +100,11 @@ class MITRECrossMapper:
         } for idx in top_indices]
     
     def run_mapping(self) -> pd.DataFrame:
-        """Main mapping function - returns enriched DataFrame"""
         results = []
         for i in range(len(self.threat_df)):
             row = self.threat_df.iloc[i].copy()
             cve_desc = self.cve_descriptions[i]
             
-            # TOP 5 MITRE TECHNIQUES
             mitre_matches = self.get_similar_mitre(cve_desc)
             for j in range(5):
                 if j < len(mitre_matches):
@@ -130,7 +118,6 @@ class MITRECrossMapper:
                     prefix = f"mitre_top{j+1}_"
                     row[f"{prefix}id"] = row[f"{prefix}name"] = row[f"{prefix}desc"] = row[f"{prefix}sim"] = None
             
-            # TOP 5 SIMILAR CVEs
             cve_matches = self.get_similar_cves(i)
             for j in range(5):
                 if j < len(cve_matches):
@@ -143,7 +130,6 @@ class MITRECrossMapper:
                     prefix = f"cve_sim{j+1}_"
                     row[f"{prefix}id"] = row[f"{prefix}desc"] = row[f"{prefix}sim"] = None
             
-            # PRIMARY TACTIC
             if mitre_matches:
                 tactic_id = mitre_matches[0]['tactic_primary']
                 tactic_row = self.mitre_tactics_df[self.mitre_tactics_df['id'] == tactic_id]

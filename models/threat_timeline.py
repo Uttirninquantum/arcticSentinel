@@ -1,6 +1,3 @@
-# models/threat_timeline.py
-# COMPLETE ThreatTimelinePipeline (EARLIER VERSION - FULLY FUNCTIONAL)
-
 import pandas as pd
 import requests
 import numpy as np
@@ -16,9 +13,7 @@ from datetime import datetime
 class ThreatTimelinePipeline:
     def __init__(self):
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
-        print(f"⚡ THREAT TIMELINE Pipeline ({self.device})")
         
-        # Preload MITRE with detailed tactics
         self.model = SentenceTransformer('basel/ATTACK-BERT', device=self.device)
         self.mitre_df = self._load_mitre_detailed()
         self.mitre_embeddings = self.model.encode(
@@ -26,10 +21,8 @@ class ThreatTimelinePipeline:
             batch_size=64,
             convert_to_numpy=True
         )
-        print(f"✅ Loaded {len(self.mitre_df)} MITRE techniques")
     
-    def _load_mitre_detailed(self) -> pd.DataFrame:
-        """Load MITRE with detailed tactic mapping (COMPLETE 14 TACTICS)"""
+    def _load_mitre_detailed(self):
         url = "https://raw.githubusercontent.com/mitre/cti/master/enterprise-attack/enterprise-attack.json"
         data = requests.get(url).json()
         techniques = []
@@ -90,12 +83,11 @@ class ThreatTimelinePipeline:
                         })
         return pd.DataFrame(techniques)
     
-    def build_cpe(self, row: pd.Series) -> str:
+    def build_cpe(self, row):
         part = {'a': 'a', 'o': 'o', 'h': 'h'}.get(str(row.get('part', 'a')).lower(), 'a')
         return f"cpe:2.3:{part}:{row['vendor']}:{row['product']}:{row['version']}:*:*:*:*:*:*:*"
     
-    def get_nvd_cves_enhanced(self, cpe: str) -> List[Dict]:
-        """NVD with FULL severity + vector parsing"""
+    def get_nvd_cves_enhanced(self, cpe):
         url = f"https://services.nvd.nist.gov/rest/json/cves/2.0?cpeName={cpe}&resultsPerPage=10"
         try:
             resp = requests.get(url, timeout=10)
@@ -106,7 +98,6 @@ class ThreatTimelinePipeline:
                 cve = vuln['cve']
                 metrics = cve.get('metrics', {})
                 
-                # Full CVSS extraction (SAFE)
                 cvss_v3_metrics = metrics.get('cvssMetricV31', [])
                 cvss_v4_metrics = metrics.get('cvssMetricV40', [])
                 cvss_v2_metrics = metrics.get('cvssMetricV2', [])
@@ -123,7 +114,6 @@ class ThreatTimelinePipeline:
                 if cvss_v2_metrics and len(cvss_v2_metrics) > 0:
                     cvss_v2 = cvss_v2_metrics[0].get('cvssData', {}).get('baseScore')
                 
-                # NVD SEVERITY from highest score
                 base_score = max(filter(None, [cvss_v3, cvss_v4, cvss_v2]))
                 nvd_severity = self._get_nvd_severity(base_score)
                 nvd_severity_score = self._get_nvd_severity_score(nvd_severity)
@@ -146,10 +136,9 @@ class ThreatTimelinePipeline:
                 })
             return cves
         except Exception as e:
-            print(f"❌ NVD Error: {e}")
             return []
     
-    def _get_nvd_severity(self, base_score: float) -> str:
+    def _get_nvd_severity(self, base_score):
         if base_score is None:
             return 'NONE'
         elif base_score >= 9.0:
@@ -163,14 +152,13 @@ class ThreatTimelinePipeline:
         else:
             return 'NONE'
     
-    def _get_nvd_severity_score(self, severity: str) -> float:
+    def _get_nvd_severity_score(self, severity):
         return {
             'CRITICAL': 0.95, 'HIGH': 0.80, 'MEDIUM': 0.60, 
             'LOW': 0.30, 'NONE': 0.0
         }.get(severity, 0.0)
     
-    def batch_mitre_detailed(self, descriptions: List[str]) -> List[List[Dict]]:
-        """Detailed MITRE matching"""
+    def batch_mitre_detailed(self, descriptions):
         if not descriptions:
             return []
         
@@ -194,7 +182,7 @@ class ThreatTimelinePipeline:
             results.append(matches[:5])
         return results
     
-    def process_asset(self, row: pd.Series) -> List[Dict]:
+    def process_asset(self, row):
         cpe = self.build_cpe(row)
         vendor, product, version = row['vendor'], row['product'], row['version']
         
@@ -225,11 +213,9 @@ class ThreatTimelinePipeline:
         
         return results
     
-    def run_pipeline(self, input_csv: str) -> pd.DataFrame:
-        """Main pipeline execution"""
+    def run_pipeline(self, input_csv):
         start = time.time()
         df = pd.read_csv(input_csv)
-        print(f"🚀 Threat Timeline: {len(df)} assets")
         
         all_results = []
         with ThreadPoolExecutor(max_workers=8) as executor:
@@ -237,10 +223,7 @@ class ThreatTimelinePipeline:
             for i, future in enumerate(as_completed(futures)):
                 results = future.result()
                 all_results.extend(results)
-                print(f"Asset {i+1}: {len(results)} threats")
         
-        # Batch MITRE mapping
-        print("🧠 Mapping MITRE ATT&CK...")
         if all_results:
             descriptions = [r['description'] for r in all_results]
             mitre_results = self.batch_mitre_detailed(descriptions)
@@ -259,21 +242,15 @@ class ThreatTimelinePipeline:
         
         df_out = pd.DataFrame(all_results)
         elapsed = time.time() - start
-        print(f"⚡ COMPLETE: {len(df_out)} threats in {elapsed:.1f}s")
         return df_out
 
-    # Add this method to ThreatTimelinePipeline class
-    def run_pipeline_csv(self, df_assets: pd.DataFrame) -> pd.DataFrame:
-        """Streamlit-compatible version"""
-        print(f"🚀 Processing {len(df_assets)} assets from DataFrame")
+    def run_pipeline_csv(self, df_assets):
 
         all_results = []
         for i, (_, row) in enumerate(df_assets.iterrows()):
             results = self.process_asset(row)
             all_results.extend(results)
-            print(f"Asset {i+1}: {len(results)} CVEs")
 
-        # MITRE batch mapping
         descriptions = [r['description'] for r in all_results]
         mitre_results = self.batch_mitre_detailed(descriptions)
 
@@ -289,5 +266,3 @@ class ThreatTimelinePipeline:
                 })
 
         return pd.DataFrame(all_results)
-
-    
