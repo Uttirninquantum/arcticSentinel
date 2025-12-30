@@ -202,14 +202,6 @@ if page == "📊 Overview":
                                 st.metric("Published", row['published'][:10])
                             st.write(row['description'])
                             
-                            if st.button(f"➕ Add to Dataset", key=f"add_{idx}"):
-                                new_row = pd.DataFrame([row.drop('similarity_score')])
-                                if len(st.session_state.cross_mapped_data) > 0:
-                                    st.session_state.cross_mapped_data = pd.concat([st.session_state.cross_mapped_data, new_row], ignore_index=True)
-                                else:
-                                    st.session_state.threat_data = pd.concat([st.session_state.threat_data, new_row], ignore_index=True)
-                                st.success(f"✅ Added! Total: {total_threats+1}")
-                                st.rerun()
                 else:
                     st.warning("❌ No similar CVEs found (threshold: 20%)")
 
