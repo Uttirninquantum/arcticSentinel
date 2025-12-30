@@ -17,42 +17,37 @@ st.markdown(
 )
 st.markdown(
     """
-    <style>
-        .hero {
-            display: flex;
-            margin-top: 5rem;
-            margin-bottom: 5rem;
-            margin-left: auto;
-            margin-right: auto;
-            justify-content: center;
-            align-items: center;
-            text-align: center;
-        }
-        .hero-inner {
-            max-width: 600px;
-        }
-    </style>
-    """,
+<style>
+    section[data-testid="stSidebar"] {
+        display: none !important;
+    }
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    header {visibility: hidden;}
+</style>
+""",
     unsafe_allow_html=True,
 )
 
 st.subheader("Choose File")
-st.caption("Upload your asset list, please note the format of the asset list as follows")
-st.caption("part (a for application, o for operating system and h for hardware), vendor, product, version") 
-
-uploaded = st.file_uploader(
-    "", type=["csv"], label_visibility="collapsed"
+st.caption(
+    "Upload your asset list, please note the format of the asset list as follows"
 )
+st.caption(
+    "part (a for application, o for operating system and h for hardware), vendor, product, version"
+)
+
+uploaded = st.file_uploader("", type=["csv"], label_visibility="collapsed")
 
 if uploaded:
     col1, col2 = st.columns(2)
-    
+
     with col1:
         st.success("File selected")
-    
+
     with col2:
         st.empty()
-    
+
     if st.button("Upload", type="primary", key="upload_btn"):
         st.session_state["file"] = uploaded
         st.switch_page("pages/2_Dashboard.py")
