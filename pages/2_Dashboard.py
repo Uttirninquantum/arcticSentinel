@@ -20,14 +20,6 @@ import warnings
 import kaleido
 import os
 
-try:
-    kaleido.get_chrome()
-    print("✅ Chrome installed for PDF export")
-except:
-    print("⚠️ Chrome installation failed - PDF charts may not work")
-    
-warnings.filterwarnings('ignore')
-
 st.set_page_config(page_title="Arctic Sentinel", layout="wide", initial_sidebar_state="expanded")
 
 st.markdown(
