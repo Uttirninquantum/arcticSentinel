@@ -73,6 +73,3 @@ Arctic Sentinel is a Streamlit-based CVE threat analysis platform with 5 integra
 
 📄 PDF Export: One-click professional reports embedding all charts + dynamic NLP remediation strategies
 
-
-## Attributions
-1. CVE
