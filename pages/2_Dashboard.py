@@ -107,6 +107,19 @@ col1, col2 = st.columns([1, 1])
 with col1:
     st.markdown("## 🛡️ Arctic Sentinel")
     page = st.selectbox("📍 Navigate", ["📊 Overview", "🔐 CVE Info", "🎯 MITRE Info", "🔍 Advanced Filter", "📄 Export PDF"])
+    
+    col3, col4 = st.columns([1, 1])
+    
+    with col3:
+        if st.button("Upload a different file", type="primary"):
+            st.switch_page("1_Upload.py")
+            
+    with col4:
+        Logout = st.button("Logout", type="secondary")
+        if Logout:
+            for key in st.session_state.keys():
+                del st.session_state[key]
+            st.experimental_rerun()
 
 with col2:
     st.markdown("### ⚙️ Controls")
