@@ -1,8 +1,6 @@
 # Arctic Sentinel
 CODE@FROST 2025 Hackathon Team
 
-
-
 ## Team
 ### Team Name
 *BLITZKRIEG*
@@ -42,9 +40,7 @@ ProblemStatement #10: Autonomous Security Threat Intelligence Aggregator
    `https://docs.reportlab.com/reportlab/userguide/`  
    *PDF generation, Paragraph/Table styling, Image embedding, page layouts*
 
-**Plus Kaleido docs for `pio.to_image()` chart-to-PNG conversion.** 📚🔗
-
-
+**Plus Kaleido docs for `pio.to_image()` chart-to-PNG conversion.**
 
 ## Live Deployment Link
 
@@ -59,10 +55,10 @@ Link: https://www.canva.com/design/DAG8-Fu_p0k/Ji80loMJRxg5wAcqUVMK7Q/view?utm_c
 ## Tech Stack (Inclusive of Justification of Use)
 Primary Programming Language: Python
 
-Frontend Framework (or Library): ```streamlit```
+Frontend Framework (or Library): ```streamlit``` (Python)
+Backend: ```torch```, ```sklearn``` (scikit-learn), ```pandas```, ```numpy```, ```sentence_transformers```
 
-
-Tech Stack: ATTACK-BERT embeddings, Plotly interactive viz, ReportLab PDF generation, real-time session state, production error handling. Fully functional threat intel platform with ML-powered similarity matching and automated reporting.
+Tech Stack: ATTACK-BERT embeddings, Plotly interactive, ReportLab PDF generation. Fully functional threat intel platform with ML-powered similarity matching and automated reporting.
 
 
 ## Summary of Idea
