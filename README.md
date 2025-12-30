@@ -73,3 +73,10 @@ Arctic Sentinel is a Streamlit-based CVE threat analysis platform with 5 integra
 
 📄 PDF Export: One-click professional reports embedding all charts + dynamic remediation strategies
 
+## Working of the project
+
+The project has 1 folder called models which holds the files threat_timeline.py (to process the asset list) and mitre_cross_mapper.py ( to get similar mitre ids and cve ids ) 
+
+another folder called pages which has 2 files upload.py( to upload the asset list ) and dashboard.py ( the main dashboard ) 
+
+this repository also has a requirements.txt file having all the nesscessary python libraries , an app.py file for the main screen of the app as well as mock asset.csv file 
