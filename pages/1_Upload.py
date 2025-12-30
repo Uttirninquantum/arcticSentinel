@@ -15,10 +15,30 @@ st.markdown(
     """,
     unsafe_allow_html=True,
 )
+st.markdown(
+    """
+    <style>
+        .hero {
+            display: flex;
+            margin-top: 5rem;
+            margin-bottom: 5rem;
+            margin-left: auto;
+            margin-right: auto;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }
+        .hero-inner {
+            max-width: 600px;
+        }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
 
 st.subheader("Choose File")
-st.caption("Upload your assest list , please note the format of the asses list as follows")
-st.caption("part ( a for application , o for operating system and h for hardware ) , vendor , product , version ") 
+st.caption("Upload your asset list, please note the format of the asset list as follows")
+st.caption("part (a for application, o for operating system and h for hardware), vendor, product, version") 
 
 uploaded = st.file_uploader(
     "", type=["csv"], label_visibility="collapsed"
