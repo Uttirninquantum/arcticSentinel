@@ -106,7 +106,7 @@ col1, col2 = st.columns([1, 1])
 
 with col1:
     st.markdown("## 🛡️ Arctic Sentinel")
-    page = st.selectbox("📍 Navigate", ["📊 Overview", "🔐 CVE Info", "🎯 MITRE Info", "🔍 Search", "📄 Export PDF"])
+    page = st.selectbox("📍 Navigate", ["📊 Overview", "🔐 CVE Info", "🎯 MITRE Info", "🔍 Advanced Filter", "📄 Export PDF"])
 
 with col2:
     st.markdown("### ⚙️ Controls")
@@ -207,6 +207,8 @@ if page == "📊 Overview":
 
 
 elif page == "🔐 CVE Info":
+    st.warning("⚠️ Run MITRE Map first! If not run the data obtained will be less relevant.")
+    
     st.markdown("## 🔐 CVE Intelligence & Relationships")
     
     if not has_data:
@@ -251,6 +253,8 @@ elif page == "🔐 CVE Info":
 # PAGE 3: MITRE INFO
 # ============================================
 elif page == "🎯 MITRE Info":
+    st.warning("⚠️ Run MITRE Map first! If not run the data obtained will be less relevant.")
+    
     st.markdown("## 🎯 MITRE ATT&CK Intelligence")
     
     if not has_data:
@@ -301,7 +305,7 @@ elif page == "🎯 MITRE Info":
 # PAGE 4: SEARCH
 # ============================================
 elif page == "🔍 Search":
-    st.markdown("## 🔍 Advanced Threat Search")
+    st.markdown("## 🔍 Advanced Threat Filter")
     
     if not has_data:
         st.warning("⚠️ Run analysis first!")
